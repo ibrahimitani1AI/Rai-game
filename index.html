@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rogue AI: Trapped in VR</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--grad:linear-gradient(135deg,#ff6eb4,#ffb347);--pink:#ff6eb4;--orange:#ffb347;--glass:rgba(255,255,255,0.12);--glass-border:rgba(255,255,255,0.22);--r:16px}
+:root{
+  --grad:linear-gradient(135deg,#ff6eb4,#ffb347);
+  --pink:#ff6eb4;--orange:#ffb347;
+  --glass:rgba(255,255,255,0.12);
+  --glass-border:rgba(255,255,255,0.22);
+  --r:16px;
+}
 body{background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito',sans-serif}
 .phone{width:812px;height:375px;position:relative;overflow:hidden;border-radius:28px;border:2px solid rgba(255,255,255,0.15);box-shadow:0 24px 80px rgba(0,0,0,.7);flex-shrink:0}
 .bg{position:absolute;inset:0;background:linear-gradient(180deg,#87ceeb 0%,#c8dfff 28%,#ffe8a0 48%,#1a3a6e 68%,#060c1f 100%)}
@@ -27,22 +34,38 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 .dot{width:7px;height:7px;border-radius:50%;background:var(--pink);animation:dp 1.4s ease-in-out infinite}
 .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
 @keyframes dp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.65)}}
+
+/* ── S1 LANDING ── */
 #s1{flex-direction:column;align-items:center;justify-content:center;gap:6px}
 #s1 h1{font-size:42px;font-weight:900;color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.6);line-height:1}
 #s1 h2{font-size:20px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:20px}
 #s1 .btn-g{font-size:17px;padding:14px 52px;box-shadow:0 4px 24px rgba(255,110,180,.4)}
+
+/* ── S2 HOME ── */
 #s2{align-items:stretch}
 .s2-left{width:260px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:24px 20px}
 .s2-logo{font-size:17px;font-weight:900;color:#fff;margin-bottom:4px}
 .s2-left .btn-g,.s2-left .btn-gh{font-size:15px;padding:12px 20px;text-align:center;width:100%}
 .s2-right{flex:1;display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;padding:16px 18px;gap:10px}
 .mascot-sm{width:52px;height:52px;border-radius:50%;font-size:26px;background:linear-gradient(135deg,#2a0a3a,#4a1060);border:2px solid var(--pink);display:flex;align-items:center;justify-content:center}
+
+/* ── S3 HOST NAME ── */
 #s3{flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
 #s3 h2{font-size:22px;font-weight:900;color:#fff}
-.name-card{padding:20px;width:340px;display:flex;flex-direction:column;gap:10px}
+.form-card{padding:20px;width:360px;display:flex;flex-direction:column;gap:10px}
 .f-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
 .f-in{width:100%;padding:11px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;outline:none;text-align:center}
 .f-in::placeholder{color:rgba(255,255,255,.25);font-size:14px}
+
+/* settings rows */
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.set-row:last-child{border:none}
+.set-label{font-size:12px;color:rgba(255,255,255,.7)}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.stepper span{font-size:13px;font-weight:700;min-width:22px;text-align:center;color:#fff}
+
+/* ── S4 HOST LOBBY ── */
 #s4{flex-direction:column;padding:14px 18px;gap:10px}
 .lobby-hdr{display:flex;align-items:center;gap:10px}
 .host-tag{display:flex;align-items:center;gap:8px;background:rgba(255,215,0,.18);border:1.5px solid rgba(255,215,0,.35);border-radius:999px;padding:7px 14px}
@@ -53,17 +76,23 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 .leave{background:#ef4444;border:none;border-radius:8px;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer;margin-left:auto}
 .lobby-body{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0}
 .l-panel{padding:12px 14px;overflow-y:auto}
+.p-count{font-size:12px;font-weight:600;color:rgba(255,255,255,.9);margin-bottom:10px}
+.p-count em{color:var(--pink);font-style:normal}
 .p-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.08);margin-bottom:5px}
 .p-av{width:28px;height:28px;border-radius:50%;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#1a1a3a,#3a2a6a)}
 .p-name{flex:1;font-size:13px;font-weight:700;color:#fff}
 .p-sub{font-size:10px;color:rgba(255,255,255,.45)}
 .lobby-footer{display:flex;justify-content:flex-end;align-items:flex-end}
 .start-sub{font-size:10px;color:rgba(255,255,255,.45);font-weight:600;text-align:right;margin-top:4px}
+
+/* ── S5 JOIN ── */
 #s5{flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
 #s5 h2{font-size:22px;font-weight:900;color:#fff}
 .join-card{padding:20px;width:340px;display:flex;flex-direction:column;gap:12px}
 .code-in{width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;letter-spacing:4px;outline:none;text-transform:uppercase;text-align:center}
 .code-in::placeholder{color:rgba(255,255,255,.2);font-size:14px;letter-spacing:1px}
+
+/* ── S6 PLAYER WAITING ── */
 #s6{flex-direction:row;align-items:center;justify-content:center;gap:24px;padding:20px 28px}
 .w-left{display:flex;flex-direction:column;align-items:center;gap:10px;width:220px}
 .w-left h2{font-size:20px;font-weight:900;color:#fff;text-align:center}
@@ -75,10 +104,71 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 .w-right{display:flex;flex-direction:column;gap:8px;width:260px}
 .w-panel{padding:12px 14px}
 .wl{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+
+/* ── S7 PLAYER GAME VIEW ── */
+#s7{flex-direction:column;padding:16px 20px;gap:12px}
+.game-header{display:flex;align-items:center;justify-content:space-between}
+.room-name{font-size:15px;font-weight:900;color:#fff}
+.hp-bars{display:flex;gap:8px;flex-wrap:wrap}
+.hp-chip{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.hp-chip .av{font-size:13px}
+.hp-chip .hb{width:36px;height:5px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
+.hp-chip .hf{height:100%;border-radius:3px;transition:width .3s}
+.hp-chip .hv{font-size:10px;color:rgba(255,255,255,.6);min-width:24px}
+.doors-area{flex:1;display:flex;align-items:center;justify-content:center;gap:16px}
+.door-btn{
+  width:110px;height:110px;border-radius:20px;
+  background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.25);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .15s;color:#fff;gap:6px;
+}
+.door-btn:hover{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.5);transform:scale(1.05)}
+.door-btn .dn{font-size:28px;font-weight:900}
+.door-btn .dl{font-size:11px;color:rgba(255,255,255,.55);font-weight:600}
+.room-effect{font-size:12px;text-align:center;color:rgba(255,255,255,.7);min-height:18px}
+.revisit-badge{background:rgba(255,180,50,.2);border:1px solid rgba(255,180,50,.4);border-radius:8px;padding:3px 10px;font-size:11px;color:#ffb347;font-weight:700}
+
+/* ── S8 RAI GAME VIEW ── */
+#s8{flex-direction:column;padding:10px 14px;gap:8px;background:rgba(5,0,15,0.6)}
+.rai-header{display:flex;align-items:center;gap:10px}
+.rai-badge-big{background:#ef4444;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:900;color:#fff}
+.rai-content{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0}
+.rai-map{padding:10px;overflow:auto}
+.map-grid{display:inline-grid;gap:1px;font-family:monospace;font-size:9px}
+.mc{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:3px;font-weight:700;font-size:8px;position:relative}
+.mc.current{outline:2px solid #fff;outline-offset:1px;z-index:2}
+.rai-info{padding:10px;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+.rai-doors{display:flex;flex-direction:column;gap:6px}
+.rai-door-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.08)}
+.rai-door-num{font-size:14px;font-weight:900;color:#fff;width:20px}
+.rai-door-type{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+.rai-abilities{display:flex;flex-direction:column;gap:4px}
+.rai-ab-btn{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:#fca5a5;cursor:pointer;text-align:left;font-family:'Nunito',sans-serif;transition:background .12s}
+.rai-ab-btn:hover{background:rgba(239,68,68,.3)}
+
+/* ── GAME OVER ── */
+#s9{flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#s9 .go-ico{font-size:56px}
+#s9 h2{font-size:26px;font-weight:900;color:#fff;text-align:center}
+#s9 p{font-size:14px;color:rgba(255,255,255,.65);text-align:center}
+
+/* room colors */
+.rm-S{background:#0ea5e9;color:#fff}
+.rm-E{background:#6366f1;color:#fff}
+.rm-T{background:#eab308;color:#713f12}
+.rm-N{background:#374151;color:#9ca3af}
+.rm-H{background:#22c55e;color:#14532d}
+.rm-P{background:#ef4444;color:#fff}
+.rm-D{background:#a855f7;color:#fff}
+.rm-J{background:#3b82f6;color:#fff}
+.rm-M{background:#db2777;color:#fff}
+.rm-empty{background:#1f2937;color:transparent}
 </style>
 </head>
 <body>
 <div class="phone">
+
+<!-- BG -->
 <div class="bg">
   <svg viewBox="0 0 812 375" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
     <defs><radialGradient id="sg" cx="50%" cy="42%" r="32%"><stop offset="0%" stop-color="#fff5c0" stop-opacity=".75"/><stop offset="100%" stop-color="#87ceeb" stop-opacity="0"/></radialGradient></defs>
@@ -88,25 +178,16 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
     <polygon points="50,375 160,120 270,200 230,375" fill="#0d3a20" opacity=".9"/>
     <polygon points="812,375 680,145 590,230 630,375" fill="#1a4a2e" opacity=".85"/>
     <polygon points="762,375 640,110 550,195 590,375" fill="#0d3a20" opacity=".9"/>
-    <rect x="38" y="200" width="18" height="55" fill="#2d1b4e" opacity=".7" rx="2"/><polygon points="38,200 47,178 56,200" fill="#3d2060" opacity=".7"/>
-    <rect x="740" y="195" width="20" height="60" fill="#1a2a5e" opacity=".7" rx="2"/><polygon points="740,195 750,170 760,195" fill="#2a3a7e" opacity=".7"/>
     <rect x="384" y="148" width="44" height="110" fill="#3a2060" opacity=".75" rx="2"/>
     <circle cx="406" cy="168" r="15" fill="none" stroke="#ffd700" stroke-width="2" opacity=".85"/>
-    <line x1="406" y1="168" x2="406" y2="158" stroke="#ffd700" stroke-width="1.5" opacity=".85"/>
-    <line x1="406" y1="168" x2="413" y2="173" stroke="#ffd700" stroke-width="1.5" opacity=".85"/>
     <polygon points="406,128 391,150 421,150" fill="#4a2880" opacity=".8"/>
-    <ellipse cx="180" cy="210" rx="140" ry="155" fill="none" stroke="rgba(180,160,255,0.18)" stroke-width="14"/>
-    <ellipse cx="632" cy="210" rx="140" ry="155" fill="none" stroke="rgba(180,160,255,0.18)" stroke-width="14"/>
     <ellipse cx="406" cy="340" rx="340" ry="55" fill="#1a3a6e" opacity=".55"/>
-    <rect x="300" y="305" width="212" height="9" fill="#5a4a2a" opacity=".7" rx="3"/>
     <g opacity=".65">
-      <ellipse cx="298" cy="355" rx="8" ry="18" fill="#0a0a18"/><circle cx="298" cy="331" r="8" fill="#0a0a18"/>
-      <ellipse cx="340" cy="353" rx="8" ry="20" fill="#100820"/><circle cx="340" cy="327" r="9" fill="#100820"/>
+      <ellipse cx="340" cy="355" rx="8" ry="20" fill="#100820"/><circle cx="340" cy="329" r="9" fill="#100820"/>
       <ellipse cx="378" cy="355" rx="7" ry="17" fill="#0a0a18"/><circle cx="378" cy="332" r="7" fill="#0a0a18"/>
       <ellipse cx="406" cy="353" rx="9" ry="20" fill="#08102e"/><circle cx="406" cy="327" r="9" fill="#08102e"/>
       <ellipse cx="440" cy="355" rx="7" ry="18" fill="#0a0a18"/><circle cx="440" cy="331" r="7" fill="#0a0a18"/>
       <ellipse cx="474" cy="354" rx="8" ry="19" fill="#100820"/><circle cx="474" cy="329" r="8" fill="#100820"/>
-      <ellipse cx="510" cy="355" rx="7" ry="17" fill="#0a0a18"/><circle cx="510" cy="332" r="7" fill="#0a0a18"/>
     </g>
   </svg>
 </div>
@@ -133,14 +214,57 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
   </div>
 </div>
 
-<!-- S3 HOST NAME -->
+<!-- S3 HOST SETUP -->
 <div class="screen" id="s3">
   <button class="back" onclick="go('s2')">←</button>
-  <h2>What's your name?</h2>
-  <div class="name-card glass">
+  <h2>Host a game</h2>
+  <div class="form-card glass">
     <div>
       <div class="f-label">Your name</div>
       <input class="f-in" id="host-name" maxlength="14" placeholder="Enter your name" autocomplete="off">
+    </div>
+    <div style="margin-top:4px">
+      <div class="f-label" style="margin-bottom:8px">Game settings</div>
+      <div class="set-row">
+        <span class="set-label">Sections</span>
+        <div class="stepper">
+          <button onclick="adj('ns',-1)">−</button>
+          <span id="ns-v">4</span>
+          <button onclick="adj('ns',1)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Starting HP</span>
+        <div class="stepper">
+          <button onclick="adj('shp',-10)">−</button>
+          <span id="shp-v">100</span>
+          <button onclick="adj('shp',10)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Poison dmg (all)</span>
+        <div class="stepper">
+          <button onclick="adj('dp',-1)">−</button>
+          <span id="dp-v">10</span>
+          <button onclick="adj('dp',1)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Trap dmg (one)</span>
+        <div class="stepper">
+          <button onclick="adj('dd',-5)">−</button>
+          <span id="dd-v">20</span>
+          <button onclick="adj('dd',5)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Healing (all)</span>
+        <div class="stepper">
+          <button onclick="adj('dh',-5)">−</button>
+          <span id="dh-v">10</span>
+          <button onclick="adj('dh',5)">+</button>
+        </div>
+      </div>
     </div>
     <div id="s3-err" class="err"></div>
     <button class="btn-g" id="host-btn" onclick="createGame()" style="font-size:14px;padding:12px;width:100%">Create Lobby →</button>
@@ -164,16 +288,12 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
   </div>
   <div class="lobby-body">
     <div class="l-panel glass">
-      <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.9);margin-bottom:10px" id="lobby-count">Players: 0</div>
+      <div class="p-count" id="lobby-count">Players: 0</div>
       <div id="lobby-players"></div>
     </div>
     <div class="l-panel glass">
       <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Settings</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:2">
-        Sections: <strong style="color:#fff">4</strong><br>
-        Starting HP: <strong style="color:#fff">100</strong><br>
-        Poison: <strong style="color:#ff6eb4">10</strong> · Damage: <strong style="color:#c084fc">20</strong> · Heal: <strong style="color:#4ade80">10</strong>
-      </div>
+      <div id="settings-display" style="font-size:11px;color:rgba(255,255,255,.65);line-height:2"></div>
     </div>
   </div>
   <div class="lobby-footer">
@@ -222,200 +342,656 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
   </div>
 </div>
 
+<!-- S7 PLAYER GAME VIEW (sees doors only) -->
+<div class="screen" id="s7">
+  <div class="game-header">
+    <div>
+      <div class="room-name" id="pg-room">Room</div>
+      <div id="pg-revisit" style="display:none" class="revisit-badge">⚠ You've been here before</div>
+    </div>
+    <div class="hp-bars" id="pg-hpbars"></div>
+  </div>
+  <div class="room-effect" id="pg-effect"></div>
+  <div class="doors-area" id="pg-doors"></div>
+</div>
+
+<!-- S8 RAI GAME VIEW (sees map + paths + doors) -->
+<div class="screen" id="s8">
+  <div class="rai-header">
+    <span class="rai-badge-big">😈 RAI</span>
+    <div style="font-size:12px;color:rgba(255,255,255,.7)" id="rg-pos">Position: —</div>
+    <div class="hp-bars" id="rg-hpbars" style="margin-left:auto"></div>
+  </div>
+  <div class="rai-content">
+    <div class="rai-map glass" id="rg-map"></div>
+    <div class="rai-info">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Doors from current room</div>
+        <div class="rai-doors" id="rg-doors"></div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Abilities</div>
+        <div class="rai-abilities">
+          <button class="rai-ab-btn">🔒 Lock a door</button>
+          <button class="rai-ab-btn">🔀 Shuffle door numbers</button>
+          <button class="rai-ab-btn">⚡ Direct attack (−20 HP)</button>
+          <button class="rai-ab-btn">💬 Taunt players</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S9 GAME OVER -->
+<div class="screen" id="s9">
+  <div class="go-ico" id="go-ico">🎉</div>
+  <h2 id="go-title">Game Over</h2>
+  <p id="go-msg"></p>
+  <button class="btn-g" onclick="go('s2')" style="font-size:15px;padding:12px 32px;margin-top:8px">Play Again</button>
+</div>
+
 </div><!-- /phone -->
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
-const URL  = 'https://rpciorcoksfadwobnywh.supabase.co';
+// ══════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════
+const SUPA = 'https://rpciorcoksfadwobnywh.supabase.co';
 const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwY2lvcmNva3NmYWR3b2JueXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTA3ODgsImV4cCI6MjA5NzA2Njc4OH0.Vhp8BZ-mdn6yjOgdhmxFld1wUvSPMRJkAtMvw4PBaqI';
-const REST = URL + '/rest/v1';
-const HDR  = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+const REST = SUPA + '/rest/v1';
+const HDR  = {'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 
-const AVATARS = ['🦊','🐺','🦁','🐯','🐻','🦅','🐉','🦋'];
+// ══════════════════════════════════════════════════════════════
+// MAP ENGINE (same logic as simulator)
+// ══════════════════════════════════════════════════════════════
+const ROWS=7, CPS=3;
+const SAFE=new Set(['S','E','T','N','H']);
+const DMG_ROOM={P:1,D:1,H:-1,M:1}; // sign only — actual values from game settings
 
-// ── STATE ─────────────────────────────────────────────────────
-let S = { gameId:null, gameCode:null, playerId:null, isHost:false, pollTimer:null };
+function rng(s){let v=s>>>0;return()=>{v=(v*1664525+1013904223)>>>0;return v/0x100000000;}}
+function numM(np){return np>=6?2:1;}
+function numJ(ns){return Math.max(1,ns-2);}
 
-// ── REST HELPERS ──────────────────────────────────────────────
-async function dbGet(table, params) {
-  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-  const r = await fetch(`${REST}/${table}?${qs}`, { headers: HDR });
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.message || d.details || 'DB error');
+function crossesSectionWall(c,nc,grid,r){
+  if(nc===c+1&&nc%CPS===0) return grid[r][c]!=='T';
+  if(nc===c-1&&c%CPS===0) return true;
+  return false;
+}
+
+function bfsSeg(grid,start,end,COLS,allowed){
+  const k=([r,c])=>`${r},${c}`;
+  const q=[[start,[start]]];const vis=new Set([k(start)]);
+  while(q.length){
+    const[pos,path]=q.shift();
+    if(pos[0]===end[0]&&pos[1]===end[1])return path;
+    const[r,c]=pos;
+    for(const[nr,nc]of[[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){
+      if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
+      const kk=k([nr,nc]);if(vis.has(kk))continue;
+      const t=grid[nr][nc];if(!t)continue;
+      if(allowed&&!allowed.has(t))continue;
+      if(crossesSectionWall(c,nc,grid,r))continue;
+      vis.add(kk);q.push([[nr,nc],path.concat([[nr,nc]])]);
+    }
+  }return null;
+}
+
+function bfsWaypoints(grid,wps,COLS,allowed){
+  let path=[wps[0]];
+  for(let i=0;i<wps.length-1;i++){
+    const seg=bfsSeg(grid,wps[i],wps[i+1],COLS,allowed);
+    if(!seg)return null;
+    path=path.concat(seg.slice(1));
+  }
+  return path;
+}
+
+function carveSegment(grid,from,to,COLS,r){
+  let[row,col]=from;const[er,ec]=to;
+  const vis=new Set([`${row},${col}`]);const stk=[[row,col]];
+  for(let _=0;_<ROWS*COLS*8;_++){
+    if(row===er&&col===ec)break;
+    const dc=col<ec?1:(col>ec?-1:0),dr=row<er?1:(row>er?-1:0);
+    const ca=[];
+    for(const[ddr,ddc,w]of[[0,dc,5],[dr,0,3],[0,-dc,1],[-dr,0,1]]){
+      if(!ddr&&!ddc)continue;
+      const nr=row+ddr,nc=col+ddc;
+      if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
+      const kk=`${nr},${nc}`;if(vis.has(kk))continue;
+      const ex=grid[nr][nc];
+      if(ex==='T'&&!(nr===er&&nc===ec))continue;
+      if(ex==='P'||ex==='D'||ex==='M'||ex==='J')continue;
+      for(let i=0;i<w;i++)ca.push([nr,nc]);
+    }
+    if(!ca.length){if(stk.length>1){stk.pop();[row,col]=stk[stk.length-1];}continue;}
+    const[nr,nc]=ca[Math.floor(r()*ca.length)];
+    vis.add(`${nr},${nc}`);stk.push([nr,nc]);
+    if(!grid[nr][nc]&&!(nr===er&&nc===ec))grid[nr][nc]='N';
+    row=nr;col=nc;
+  }
+}
+
+function buildDoorAssignments(grid,COLS){
+  const A={};
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      if(!grid[r][c])continue;
+      if(grid[r][c]==='T'){
+        const nc=c+1;
+        A[`${r},${c}`]=nc<COLS&&grid[r][nc]==='N'?{right:{num:1,target:[r,nc]}}:{};
+        continue;
+      }
+      const dirs=[[-1,0,'top'],[0,1,'right'],[1,0,'bottom'],[0,-1,'left']];
+      const pass=dirs.filter(([dr,dc])=>{
+        const nr=r+dr,nc=c+dc;
+        if(nr<0||nr>=ROWS||nc<0||nc>=COLS)return false;
+        if(!grid[nr][nc])return false;
+        if(crossesSectionWall(c,nc,grid,r))return false;
+        return true;
+      });
+      for(let i=pass.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pass[i],pass[j]]=[pass[j],pass[i]];}
+      const map={};
+      pass.forEach(([dr,dc,side],idx)=>{map[side]={num:idx+1,target:[r+dr,c+dc]};});
+      A[`${r},${c}`]=map;
+    }
+  }
+  return A;
+}
+
+function generateMap(ns,mix,seed){
+  const r=rng(seed);
+  const COLS=ns*CPS;
+  const grid=Array.from({length:ROWS},()=>Array(COLS).fill(''));
+
+  function randEmpty(c0,c1){
+    const ca=[];
+    for(let row=2;row<=ROWS-3;row++)for(let col=c0;col<=c1;col++)if(!grid[row][col])ca.push([row,col]);
+    if(!ca.length)return null;
+    return ca[Math.floor(r()*ca.length)];
+  }
+
+  // S
+  const sp=randEmpty(0,CPS-1);const[sr,sc]=sp;grid[sr][sc]='S';
+  // E
+  const ep=randEmpty((ns-1)*CPS,(ns-1)*CPS+CPS-1);const[er,ec]=ep;grid[er][ec]='E';
+  // T+N
+  const tasks=[];
+  for(let i=0;i<ns-1;i++){
+    const wc=i*CPS+(CPS-1),nc=wc+1;
+    const ca=[];
+    for(let row=2;row<=ROWS-3;row++)if(!grid[row][wc]&&!grid[row][nc])ca.push(row);
+    if(!ca.length)continue;
+    const tr=ca[Math.floor(r()*ca.length)];
+    grid[tr][wc]='T';grid[tr][nc]='N';
+    tasks.push([tr,wc,tr,nc]);
+  }
+  // Waypoints
+  const wps=[[sr,sc]];
+  for(const[tr,tc,nr,nc]of tasks){wps.push([tr,tc]);wps.push([nr,nc]);}
+  wps.push([er,ec]);
+  // Carve
+  for(let i=0;i<wps.length-1;i++)carveSegment(grid,wps[i],wps[i+1],COLS,r);
+  // M (after carve)
+  const mPos=[];
+  for(let i=0;i<numM(8);i++){const p=randEmpty(0,COLS-1);if(!p)break;grid[p[0]][p[1]]='M';mPos.push(p);}
+  // J (after carve)
+  const jPos=[];
+  const elSecs=Array.from({length:ns-1},(_,i)=>i);
+  for(let i=elSecs.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[elSecs[i],elSecs[j]]=[elSecs[j],elSecs[i]];}
+  for(const si of elSecs.slice(0,numJ(ns))){
+    const p=randEmpty(si*CPS,(si+1)*CPS-1);
+    if(!p)continue;grid[p[0]][p[1]]='J';jPos.push(p);
+  }
+  // Sprinkle
+  const empty=[];
+  for(let row=0;row<ROWS;row++)for(let col=0;col<COLS;col++)if(!grid[row][col])empty.push([row,col]);
+  const n=empty.length;
+  const pool=[];
+  const add=(t,pts)=>{const cnt=Math.round(pts/100*n);for(let i=0;i<cnt;i++)pool.push(t);};
+  add('N',mix.n);add('H',mix.h);add('P',mix.p);add('D',mix.d);
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  for(let i=0;i<empty.length&&i<pool.length;i++){const[row,col]=empty[i];grid[row][col]=pool[i];}
+
+  const cleanPath=bfsWaypoints(grid,wps,COLS,SAFE);
+  const doorAssignments=buildDoorAssignments(grid,COLS);
+  const secs=Array.from({length:ns},(_,i)=>[i*CPS,(i+1)*CPS-1]);
+
+  return{grid,COLS,ns,secs,start:[sr,sc],exit:[er,ec],wps,tasks,mPos,jPos,cleanPath,doorAssignments};
+}
+
+// ══════════════════════════════════════════════════════════════
+// SUPABASE REST
+// ══════════════════════════════════════════════════════════════
+async function dbGet(table,params){
+  const qs=Object.entries(params).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
+  const res=await fetch(`${REST}/${table}?${qs}`,{headers:HDR});
+  const d=await res.json();
+  if(!res.ok)throw new Error(d.message||d.details||'DB error');
   return d;
 }
-
-async function dbPost(table, body) {
-  const r = await fetch(`${REST}/${table}`, { method:'POST', headers: HDR, body: JSON.stringify(body) });
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.message || d.details || 'DB error');
-  return Array.isArray(d) ? d[0] : d;
+async function dbPost(table,body){
+  const res=await fetch(`${REST}/${table}`,{method:'POST',headers:HDR,body:JSON.stringify(body)});
+  const d=await res.json();
+  if(!res.ok)throw new Error(d.message||d.details||'DB error');
+  return Array.isArray(d)?d[0]:d;
+}
+async function dbPatch(table,params,body){
+  const qs=Object.entries(params).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
+  const res=await fetch(`${REST}/${table}?${qs}`,{method:'PATCH',headers:HDR,body:JSON.stringify(body)});
+  if(!res.ok){const d=await res.json();throw new Error(d.message||'DB error');}
+}
+async function dbDelete(table,params){
+  const qs=Object.entries(params).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
+  await fetch(`${REST}/${table}?${qs}`,{method:'DELETE',headers:HDR});
 }
 
-async function dbPatch(table, params, body) {
-  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-  const r = await fetch(`${REST}/${table}?${qs}`, { method:'PATCH', headers: HDR, body: JSON.stringify(body) });
-  if (!r.ok) { const d = await r.json(); throw new Error(d.message || 'DB error'); }
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+const settings={ns:4,shp:100,dp:10,dd:20,dh:10};
+let S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,mapData:null,players:[],visited:{}};
+const AVATARS=['🦊','🐺','🦁','🐯','🐻','🦅','🐉','🦋'];
+
+// ══════════════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════════════
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function setBtn(id,loading,text){const b=document.getElementById(id);if(!b)return;b.disabled=loading;b.innerHTML=loading?`<span class="spinner"></span>${text}`:text;}
+function randCode(){return Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');}
+function adj(key,delta){
+  const limits={ns:[2,6],shp:[50,100],dp:[1,50],dd:[5,50],dh:[5,50]};
+  const step={shp:10,dd:5,dh:5}[key]||1;
+  settings[key]=Math.min(limits[key][1],Math.max(limits[key][0],settings[key]+delta));
+  document.getElementById(key+'-v').textContent=settings[key];
 }
 
-async function dbDelete(table, params) {
-  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-  await fetch(`${REST}/${table}?${qs}`, { method:'DELETE', headers: HDR });
+function renderHP(players,containerId){
+  const el=document.getElementById(containerId);if(!el)return;
+  el.innerHTML=players.map(p=>{
+    const pct=Math.max(0,p.hp);
+    const col=pct>60?'#22c55e':pct>30?'#f59e0b':'#ef4444';
+    return`<div class="hp-chip">
+      <span class="av">${p.avatar}</span>
+      <div class="hb"><div class="hf" style="width:${pct}%;background:${col}"></div></div>
+      <span class="hv">${p.alive?p.hp:'✕'}</span>
+    </div>`;
+  }).join('');
 }
 
-// ── UI HELPERS ────────────────────────────────────────────────
-function go(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function setBtn(id, loading, text) {
-  const b = document.getElementById(id);
-  if (!b) return;
-  b.disabled = loading;
-  b.innerHTML = loading ? `<span class="spinner"></span>${text}` : text;
-}
-
-function randCode() {
-  return Array.from({length:6}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
-}
-
-function renderPlayers(players, containerId) {
-  document.getElementById(containerId).innerHTML = players.map(p => `
+function renderLobbyPlayers(players,containerId){
+  document.getElementById(containerId).innerHTML=players.map(p=>`
     <div class="p-row">
       <div class="p-av">${p.avatar}</div>
-      <div style="flex:1">
-        <div class="p-name">${p.name}${p.is_host?' <span style="font-size:10px;color:var(--pink)">host</span>':''}</div>
-        <div class="p-sub">${p.hp} HP</div>
-      </div>
+      <div style="flex:1"><div class="p-name">${p.name}${p.is_host?' <span style="font-size:10px;color:var(--pink)">host</span>':''}</div></div>
     </div>`).join('');
 }
 
-// ── POLLING ───────────────────────────────────────────────────
-function startPolling(gameId, isHost) {
-  stopPolling();
-  poll(gameId, isHost);
-  S.pollTimer = setInterval(() => poll(gameId, isHost), 2500);
-}
+// ══════════════════════════════════════════════════════════════
+// POLLING
+// ══════════════════════════════════════════════════════════════
+function stopPoll(){if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}}
+function startPoll(gameId,isHost){stopPoll();doPoll(gameId,isHost);S.pollTimer=setInterval(()=>doPoll(gameId,isHost),2500);}
 
-function stopPolling() {
-  if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; }
-}
+async function doPoll(gameId,isHost){
+  try{
+    const[players,games]=await Promise.all([
+      dbGet('players',{game_id:`eq.${gameId}`,order:'joined_at.asc'}),
+      dbGet('games',{id:`eq.${gameId}`,select:'status,grid,current_pos,visited,step'})
+    ]);
+    S.players=players;
+    const game=games[0];
+    if(!game)return;
 
-async function poll(gameId, isHost) {
-  try {
-    const players = await dbGet('players', { game_id: `eq.${gameId}`, order: 'joined_at.asc' });
-    const n = players.length;
-
-    if (isHost) {
-      document.getElementById('lobby-count').textContent = `Players: ${n}`;
-      const startBtn = document.getElementById('start-btn');
-      startBtn.disabled = n < 3;
-      document.getElementById('start-sub').textContent = n < 3 ? `Need at least 3 players (${n} joined)` : `${n} players ready — start when you like`;
-      renderPlayers(players, 'lobby-players');
-    } else {
-      renderPlayers(players, 'waiting-players');
-      // Check if host started
-      const games = await dbGet('games', { id: `eq.${gameId}`, select: 'status' });
-      if (games[0]?.status === 'active') {
-        stopPolling();
-        alert('🎮 Game started! (wire game screen here)');
+    if(game.status==='active'&&(isHost||(document.getElementById('s6').classList.contains('active')))){
+      // Transition to game — load map data
+      if(game.grid&&!S.mapData){
+        S.mapData=game.grid;
+      }
+      if(game.grid){
+        S.mapData=game.grid;
+        const pos=game.current_pos||S.mapData.start;
+        S.visited=game.visited||{};
+        stopPoll();
+        enterGame(pos,players);
+        return;
       }
     }
-  } catch(e) { /* silent — next tick will retry */ }
+
+    if(game.status==='active'&&S.mapData){
+      // Game already running — sync position
+      const pos=game.current_pos||S.mapData.start;
+      S.visited=game.visited||{};
+      syncGameState(pos,players);
+      return;
+    }
+
+    if(game.status==='finished'){
+      stopPoll();
+      showGameOver(game.winner);
+      return;
+    }
+
+    if(isHost){
+      const n=players.length;
+      document.getElementById('lobby-count').textContent=`Players: ${n}`;
+      document.getElementById('start-btn').disabled=n<3;
+      document.getElementById('start-sub').textContent=n<3?`Need at least 3 players (${n} joined)`:`${n} players ready`;
+      renderLobbyPlayers(players,'lobby-players');
+    } else {
+      renderLobbyPlayers(players,'waiting-players');
+    }
+  }catch(e){/* retry next tick */}
 }
 
-// ── HOST: CREATE GAME ─────────────────────────────────────────
-async function createGame() {
-  const name = document.getElementById('host-name').value.trim();
-  if (!name) { document.getElementById('s3-err').textContent = 'Enter your name first'; return; }
-  document.getElementById('s3-err').textContent = '';
-  setBtn('host-btn', true, 'Creating…');
-
-  try {
-    const code = randCode();
-
-    const game = await dbPost('games', {
-      code, status:'waiting', host_name:name,
-      ns:4, start_hp:100, dmg_p:10, dmg_d:20, dmg_h:10,
-      mix_n:25, mix_h:25, mix_p:25, mix_d:25
+// ══════════════════════════════════════════════════════════════
+// CREATE GAME
+// ══════════════════════════════════════════════════════════════
+async function createGame(){
+  const name=document.getElementById('host-name').value.trim();
+  if(!name){document.getElementById('s3-err').textContent='Enter your name';return;}
+  document.getElementById('s3-err').textContent='';
+  setBtn('host-btn',true,'Creating…');
+  try{
+    const code=randCode();
+    const game=await dbPost('games',{
+      code,status:'waiting',host_name:name,
+      ns:settings.ns,start_hp:settings.shp,
+      dmg_p:settings.dp,dmg_d:settings.dd,dmg_h:settings.dh,
+      mix_n:25,mix_h:25,mix_p:25,mix_d:25
     });
-
-    const player = await dbPost('players', {
-      game_id: game.id, name, avatar:'😈', is_host:true, hp:game.start_hp
-    });
-
-    S.gameId   = game.id;
-    S.gameCode = code;
-    S.playerId = player.id;
-    S.isHost   = true;
-
-    document.getElementById('lobby-host-name').textContent = name;
-    document.getElementById('lobby-code').textContent = code;
+    const player=await dbPost('players',{game_id:game.id,name,avatar:'😈',is_host:true,hp:game.start_hp,role:'player'});
+    S={...S,gameId:game.id,gameCode:code,playerId:player.id,isHost:true,role:'player'};
+    document.getElementById('lobby-host-name').textContent=name;
+    document.getElementById('lobby-code').textContent=code;
+    document.getElementById('settings-display').innerHTML=`
+      Sections: <strong style="color:#fff">${settings.ns}</strong><br>
+      Starting HP: <strong style="color:#fff">${settings.shp}</strong><br>
+      Poison: <strong style="color:#ff6eb4">${settings.dp}</strong> · Trap: <strong style="color:#c084fc">${settings.dd}</strong> · Heal: <strong style="color:#4ade80">${settings.dh}</strong>`;
     go('s4');
-    startPolling(game.id, true);
-
-  } catch(e) {
-    document.getElementById('s3-err').textContent = e.message;
-  } finally {
-    setBtn('host-btn', false, 'Create Lobby →');
-  }
+    startPoll(game.id,true);
+  }catch(e){document.getElementById('s3-err').textContent=e.message;}
+  finally{setBtn('host-btn',false,'Create Lobby →');}
 }
 
-// ── PLAYER: JOIN GAME ─────────────────────────────────────────
-async function joinGame() {
-  const code = document.getElementById('join-code').value.trim().toUpperCase();
-  const name = document.getElementById('join-name').value.trim();
-  if (code.length < 6) { document.getElementById('s5-err').textContent = 'Enter the 6-character code'; return; }
-  if (!name)           { document.getElementById('s5-err').textContent = 'Enter your name'; return; }
-  document.getElementById('s5-err').textContent = '';
-  setBtn('join-btn', true, 'Joining…');
+// ══════════════════════════════════════════════════════════════
+// JOIN GAME
+// ══════════════════════════════════════════════════════════════
+async function joinGame(){
+  const code=document.getElementById('join-code').value.trim().toUpperCase();
+  const name=document.getElementById('join-name').value.trim();
+  if(code.length<6){document.getElementById('s5-err').textContent='Enter the 6-character code';return;}
+  if(!name){document.getElementById('s5-err').textContent='Enter your name';return;}
+  document.getElementById('s5-err').textContent='';
+  setBtn('join-btn',true,'Joining…');
+  try{
+    const games=await dbGet('games',{code:`eq.${code}`,status:'eq.waiting'});
+    if(!games.length)throw new Error('Game not found or already started');
+    const game=games[0];
+    const avatar=AVATARS[Math.floor(Math.random()*AVATARS.length)];
+    const player=await dbPost('players',{game_id:game.id,name,avatar,is_host:false,hp:game.start_hp,role:'player'});
+    S={...S,gameId:game.id,gameCode:code,playerId:player.id,isHost:false,role:'player'};
+    document.getElementById('waiting-code').textContent=code;
+    go('s6');
+    startPoll(game.id,false);
+  }catch(e){document.getElementById('s5-err').textContent=e.message;}
+  finally{setBtn('join-btn',false,'Join →');}
+}
 
-  try {
-    const games = await dbGet('games', { code: `eq.${code}`, status: 'eq.waiting' });
-    if (!games.length) throw new Error('Game not found or already started');
-    const game = games[0];
+// ══════════════════════════════════════════════════════════════
+// START GAME — generate map, assign RAI, save to DB
+// ══════════════════════════════════════════════════════════════
+async function startGame(){
+  if(!S.gameId)return;
+  setBtn('start-btn',true,'Generating map…');
+  try{
+    // Load game settings
+    const games=await dbGet('games',{id:`eq.${S.gameId}`});
+    const game=games[0];
 
-    const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
-    const player = await dbPost('players', {
-      game_id: game.id, name, avatar, is_host:false, hp:game.start_hp
+    // Generate map
+    const seed=Math.floor(Math.random()*999999);
+    const mapData=generateMap(game.ns,{n:game.mix_n,h:game.mix_h,p:game.mix_p,d:game.mix_d},seed);
+
+    // Assign RAI to random non-host player (or random player if all same)
+    const players=await dbGet('players',{game_id:`eq.${S.gameId}`,order:'joined_at.asc'});
+    const raiIdx=Math.floor(Math.random()*players.length);
+    const raiId=players[raiIdx].id;
+
+    // Update all players with role
+    for(const p of players){
+      await dbPatch('players',{id:`eq.${p.id}`},{role:p.id===raiId?'rai':'player'});
+    }
+
+    // Save map + game state to DB
+    await dbPatch('games',{id:`eq.${S.gameId}`},{
+      status:'active',
+      grid:mapData,
+      current_pos:mapData.start,
+      visited:{[`${mapData.start[0]},${mapData.start[1]}`]:true},
+      step:0
     });
 
-    S.gameId   = game.id;
-    S.gameCode = code;
-    S.playerId = player.id;
-    S.isHost   = false;
+    // Host transitions to game
+    S.mapData=mapData;
+    const myPlayer=players.find(p=>p.id===S.playerId);
+    S.role=myPlayer.id===raiId?'rai':'player';
+    stopPoll();
+    enterGame(mapData.start,players);
 
-    document.getElementById('waiting-code').textContent = code;
-    go('s6');
-    startPolling(game.id, false);
-
-  } catch(e) {
-    document.getElementById('s5-err').textContent = e.message;
-  } finally {
-    setBtn('join-btn', false, 'Join →');
+  }catch(e){
+    alert('Error starting game: '+e.message);
+    setBtn('start-btn',false,'Start Game →');
   }
 }
 
-// ── HOST: START GAME ──────────────────────────────────────────
-async function startGame() {
-  if (!S.gameId) return;
-  setBtn('start-btn', true, 'Starting…');
-  try {
-    await dbPatch('games', { id: `eq.${S.gameId}` }, { status:'active' });
-    stopPolling();
-    alert('🎮 Game started! (wire game screen here)');
-  } catch(e) {
-    setBtn('start-btn', false, 'Start Game →');
-    alert('Error: ' + e.message);
+// ══════════════════════════════════════════════════════════════
+// ENTER GAME VIEW
+// ══════════════════════════════════════════════════════════════
+async function enterGame(pos,players){
+  // Get my role from DB
+  if(!S.role||S.role==='player'){
+    try{
+      const me=await dbGet('players',{id:`eq.${S.playerId}`});
+      S.role=me[0]?.role||'player';
+    }catch(e){}
+  }
+  S.players=players;
+
+  if(S.role==='rai'){
+    renderRAIView(pos,players);
+    go('s8');
+  } else {
+    renderPlayerView(pos,players);
+    go('s7');
+  }
+
+  // Continue polling for position updates
+  startPoll(S.gameId,false);
+}
+
+function syncGameState(pos,players){
+  S.players=players;
+  if(S.role==='rai'){
+    renderRAIView(pos,players);
+  } else {
+    renderPlayerView(pos,players);
   }
 }
 
-// ── LEAVE ─────────────────────────────────────────────────────
-async function leaveGame() {
-  stopPolling();
-  if (S.playerId) await dbDelete('players', { id: `eq.${S.playerId}` });
-  S = { gameId:null, gameCode:null, playerId:null, isHost:false, pollTimer:null };
+// ══════════════════════════════════════════════════════════════
+// PLAYER VIEW
+// ══════════════════════════════════════════════════════════════
+const ROOM_NAMES={S:'Start',E:'Exit',T:'Task Room',N:'Neutral Room',H:'Healing Room',P:'Poison Room',D:'Damage Room',J:'Jump Room',M:'Death Room'};
+const ROOM_EFFECTS={
+  H:'💚 Healing room — all players gain HP',
+  P:'☠ Poison room — all players lose HP',
+  D:'💥 Trap room — one random player takes damage',
+  M:'💀 Murder room — one random player is eliminated',
+  T:'🔑 Task room — complete the task to progress',
+  J:'🌀 Teleport — jumping to next section!',
+  S:'Starting room — choose a door',
+  N:'Neutral room — no effect',
+  E:'🎉 EXIT REACHED — you escaped!',
+};
+
+function renderPlayerView(pos,players){
+  const map=S.mapData;
+  if(!map)return;
+  const[r,c]=pos;
+  const cell=map.grid[r][c];
+  const key=`${r},${c}`;
+  const isRevisit=S.visited[key]&&S.visited[key]>1;
+
+  document.getElementById('pg-room').textContent=ROOM_NAMES[cell]||'Room';
+  document.getElementById('pg-effect').textContent=ROOM_EFFECTS[cell]||'';
+  const rv=document.getElementById('pg-revisit');
+  rv.style.display=isRevisit?'inline-block':'none';
+
+  renderHP(players,'pg-hpbars');
+
+  // Doors
+  const doors=document.getElementById('pg-doors');
+  const doorMap=map.doorAssignments[key]||{};
+  const doorEntries=Object.entries(doorMap);
+
+  if(!doorEntries.length){
+    doors.innerHTML='<div style="color:rgba(255,255,255,.5);font-size:13px">No doors available</div>';
+    return;
+  }
+
+  doors.innerHTML=doorEntries.map(([side,{num,target}])=>`
+    <button class="door-btn" onclick="chooseDooor(${target[0]},${target[1]})">
+      <div class="dn">${num}</div>
+      <div class="dl">Door ${num}</div>
+    </button>`).join('');
+}
+
+async function chooseDooor(r,c){
+  if(!S.gameId||!S.mapData)return;
+  const key=`${r},${c}`;
+  const visited={...S.visited};
+  visited[key]=(visited[key]||0)+1;
+  S.visited=visited;
+
+  // Apply room effect locally
+  const cell=S.mapData.grid[r][c];
+  applyEffect(cell,r,c);
+
+  // Save to DB
+  await dbPatch('games',{id:`eq.${S.gameId}`},{
+    current_pos:[r,c],
+    visited,
+    step:(S.mapData.step||0)+1
+  });
+}
+
+function applyEffect(cell,r,c){
+  const game_settings_from_db={p:10,d:20,h:10}; // TODO: pull from game record
+  const alive=S.players.filter(p=>p.alive&&p.role!=='rai');
+
+  if(cell==='P'){
+    S.players.forEach(p=>{if(p.alive&&p.role!=='rai')p.hp=Math.max(0,p.hp-game_settings_from_db.p);if(!p.isRai&&p.hp<=0)p.alive=false;});
+  } else if(cell==='D'){
+    if(alive.length){const t=alive[Math.floor(Math.random()*alive.length)];t.hp=Math.max(0,t.hp-game_settings_from_db.d);if(t.hp<=0)t.alive=false;}
+  } else if(cell==='H'){
+    S.players.forEach(p=>{if(p.alive)p.hp=Math.min(100,p.hp+game_settings_from_db.h);});
+  } else if(cell==='M'){
+    if(alive.length){const t=alive[Math.floor(Math.random()*alive.length)];t.hp=0;t.alive=false;}
+  } else if(cell==='J'){
+    // teleport — handled by poll
+  } else if(cell==='E'){
+    stopPoll();
+    showGameOver('players');
+    return;
+  }
+
+  const alivePlayers=S.players.filter(p=>p.alive);
+  if(alivePlayers.length<=2){stopPoll();showGameOver('rai');return;}
+
+  renderPlayerView([r,c],S.players);
+}
+
+// ══════════════════════════════════════════════════════════════
+// RAI VIEW
+// ══════════════════════════════════════════════════════════════
+const ROOM_COLORS_RAI={S:'#0ea5e9',E:'#6366f1',T:'#eab308',N:'#374151',H:'#22c55e',P:'#ef4444',D:'#a855f7',J:'#3b82f6',M:'#db2777'};
+const ROOM_LABELS={S:'S',E:'E',T:'T',N:'N',H:'H',P:'P',D:'D',J:'J',M:'M'};
+
+function renderRAIView(pos,players){
+  const map=S.mapData;
+  if(!map)return;
+  const[pr,pc]=pos;
+
+  document.getElementById('rg-pos').textContent=`Position: (${pr},${pc}) — ${ROOM_NAMES[map.grid[pr][pc]]||''}`;
+  renderHP(players,'rg-hpbars');
+
+  // Mini map
+  const mapEl=document.getElementById('rg-map');
+  const cols=map.COLS;
+  mapEl.innerHTML='';
+  const gridDiv=document.createElement('div');
+  gridDiv.className='map-grid';
+  gridDiv.style.gridTemplateColumns=`repeat(${cols},20px)`;
+
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<cols;c++){
+      const cell=map.grid[r][c];
+      const div=document.createElement('div');
+      div.className='mc'+(r===pr&&c===pc?' current':'');
+      if(!cell){div.className+=' rm-empty';}
+      else{
+        div.style.background=ROOM_COLORS_RAI[cell]||'#374151';
+        div.style.color='#fff';
+        div.textContent=ROOM_LABELS[cell]||'?';
+        if(r===pr&&c===pc)div.textContent='📍';
+      }
+      gridDiv.appendChild(div);
+    }
+  }
+  mapEl.appendChild(gridDiv);
+
+  // Doors with room type revealed
+  const key=`${pr},${pc}`;
+  const doorMap=map.doorAssignments[key]||{};
+  const doorsEl=document.getElementById('rg-doors');
+  const entries=Object.entries(doorMap);
+  if(!entries.length){doorsEl.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3)">No doors</div>';return;}
+  doorsEl.innerHTML=entries.map(([side,{num,target}])=>{
+    const[tr,tc]=target;
+    const targetCell=map.grid[tr][tc]||'';
+    const col=ROOM_COLORS_RAI[targetCell]||'#374151';
+    return`<div class="rai-door-row">
+      <div class="rai-door-num">${num}</div>
+      <div class="rai-door-type" style="background:${col}22;color:${col};border:1px solid ${col}44">${ROOM_NAMES[targetCell]||'Unknown'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// GAME OVER
+// ══════════════════════════════════════════════════════════════
+function showGameOver(winner){
+  stopPoll();
+  if(winner==='players'){
+    document.getElementById('go-ico').textContent='🎉';
+    document.getElementById('go-title').textContent='Players Win!';
+    document.getElementById('go-msg').textContent='The team escaped the VR world. RAI is defeated.';
+  } else {
+    document.getElementById('go-ico').textContent='🤖';
+    document.getElementById('go-title').textContent='RAI Wins!';
+    document.getElementById('go-msg').textContent='Only 2 players remain. The Rogue AI takes control.';
+  }
+  if(S.gameId)dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',winner});
+  go('s9');
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEAVE
+// ══════════════════════════════════════════════════════════════
+async function leaveGame(){
+  stopPoll();
+  if(S.playerId)await dbDelete('players',{id:`eq.${S.playerId}`});
+  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,mapData:null,players:[],visited:{}};
   go('s2');
 }
 </script>
