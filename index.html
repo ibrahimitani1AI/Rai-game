@@ -294,6 +294,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
     <p>Waiting for the host to start…</p>
     <div class="cbox glass"><div class="cl">Lobby code</div><div class="cv" id="w-code">------</div></div>
     <div class="drow"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <button onclick="confirmLeave()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:999px;color:rgba(255,255,255,.6);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;padding:7px 18px;cursor:pointer;margin-top:4px">Leave lobby</button>
   </div>
   <div class="wr">
     <div class="wpanel glass"><div class="wlbl">Players in lobby</div><div id="w-players"></div></div>
@@ -307,6 +308,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
     <div class="role-title" id="role-title">You are a Player</div>
     <div class="role-sub" id="role-sub">Work with your team to reach the Exit. Vote on doors together. Watch out for RAI.</div>
     <button class="btn-g" id="role-btn" onclick="enterGameAfterReveal()" style="font-size:14px;padding:12px 28px;margin-top:4px">Got it →</button>
+    <button onclick="confirmLeave()" style="background:none;border:none;color:rgba(255,255,255,.35);font-family:'Nunito',sans-serif;font-size:11px;cursor:pointer;margin-top:4px">Leave game</button>
   </div>
 </div>
 
@@ -321,6 +323,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
       <svg viewBox="0 0 48 48"><circle class="bg-c" cx="24" cy="24" r="20"/><circle class="fg-c" id="pg-arc" cx="24" cy="24" r="20" stroke-dasharray="125.6" stroke-dashoffset="0"/></svg>
       <div class="num" id="pg-timer-num">--</div>
     </div>
+    <button onclick="confirmLeave()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.45);font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0">✕ Exit</button>
   </div>
   <div class="effect-line" id="pg-effect"></div>
   <div class="doors-wrap" id="pg-doors"></div>
@@ -333,6 +336,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
   <div class="dist-title">RAI is thinking…</div>
   <div class="dist-sub">The Rogue AI is making a move.<br>Votes are being counted.</div>
   <div class="dist-timer" id="dist-num">10</div>
+  <button onclick="confirmLeave()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:999px;color:rgba(255,255,255,.35);font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:6px 16px;cursor:pointer;margin-top:8px">Leave game</button>
 </div>
 
 <!-- REVEAL SCREEN -->
@@ -352,6 +356,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
       <div class="num" id="rg-timer-num">--</div>
     </div>
     <div class="hp-bars" id="rg-hp"></div>
+    <button onclick="confirmLeave()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.45);font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0;margin-left:6px">✕ Exit</button>
   </div>
   <div class="rcont">
     <div class="rmap glass" id="rg-map"></div>
@@ -904,7 +909,11 @@ async function raiAbility(type){
 // ══ GAME OVER ════════════════════════════════════════════════
 function showGameOver(winner){
   stopPoll();stopVoteTimer();stopDistTimer();
-  if(winner==='players'){
+  if(winner==='abandoned'){
+    document.getElementById('go-ico').textContent='🚪';
+    document.getElementById('go-title').textContent='Game Ended';
+    document.getElementById('go-msg').textContent='The host left the game.';
+  } else if(winner==='players'){
     document.getElementById('go-ico').textContent='🎉';
     document.getElementById('go-title').textContent='Players Win!';
     document.getElementById('go-msg').textContent='The team escaped the VR world.';
@@ -917,10 +926,25 @@ function showGameOver(winner){
   go('s9');
 }
 
+// ══ CONFIRM LEAVE ════════════════════════════════════════════
+function confirmLeave(){
+  const inGame=['s7','s8','s-role','s-dist','s-reveal'].some(id=>document.getElementById(id)?.classList.contains('active'));
+  const msg=S.isHost
+    ? (inGame ? 'You are the host. Leaving will end the game for everyone. Are you sure?' : 'Leave the lobby? The game will be cancelled.')
+    : (inGame ? 'Leave the game? You will be removed from the session.' : 'Leave the lobby?');
+  if(confirm(msg)) leaveGame();
+}
+
 // ══ LEAVE ════════════════════════════════════════════════════
 async function leaveGame(){
   stopPoll();stopVoteTimer();stopDistTimer();
-  if(S.playerId)await dbDelete('players',{id:`eq.${S.playerId}`}).catch(()=>{});
+  if(S.gameId){
+    if(S.isHost){
+      // Host leaving ends the game for everyone
+      await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'abandoned'}).catch(()=>{});
+    }
+    if(S.playerId) await dbDelete('players',{id:`eq.${S.playerId}`}).catch(()=>{});
+  }
   S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,
      pollTimer:null,voteTimer:null,distTimer:null,
      mapData:null,players:[],visited:{},myVote:null,gameSettings:null};
