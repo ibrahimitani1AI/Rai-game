@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rogue AI: Trapped in VR</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--grad:linear-gradient(135deg,#ff6eb4,#ffb347);--pink:#ff6eb4;--orange:#ffb347;--glass:rgba(255,255,255,0.12);--glass-border:rgba(255,255,255,0.22);--r:16px}
+body{background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito',sans-serif}
+.phone{width:812px;height:375px;position:relative;overflow:hidden;border-radius:28px;border:2px solid rgba(255,255,255,0.15);box-shadow:0 24px 80px rgba(0,0,0,.7);flex-shrink:0}
+.bg{position:absolute;inset:0;background:linear-gradient(180deg,#87ceeb 0%,#c8dfff 28%,#ffe8a0 48%,#1a3a6e 68%,#060c1f 100%)}
+.bg svg{position:absolute;inset:0;width:100%;height:100%}
+.overlay{position:absolute;inset:0;background:rgba(8,8,24,0.68)}
+.screen{position:absolute;inset:0;display:none;z-index:10}
+.screen.active{display:flex}
+.btn-g{background:var(--grad);border:none;border-radius:999px;color:#fff;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;transition:transform .12s,filter .12s;white-space:nowrap}
+.btn-g:hover{filter:brightness(1.1);transform:scale(1.03)}
+.btn-g:active{transform:scale(.97)}
+.btn-g:disabled{opacity:.5;cursor:default;transform:none;filter:none}
+.btn-gh{background:rgba(255,255,255,0.11);border:1.5px solid rgba(255,255,255,0.28);border-radius:999px;color:#fff;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer}
+.glass{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--r);backdrop-filter:blur(14px)}
+.back{position:absolute;top:14px;left:14px;z-index:20;background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.2);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:#fff}
+.err{font-size:11px;color:#ff6eb4;text-align:center;min-height:16px;margin-top:2px}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--pink);animation:dp 1.4s ease-in-out infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.65)}}
+#s1{flex-direction:column;align-items:center;justify-content:center;gap:6px}
+#s1 h1{font-size:42px;font-weight:900;color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.6);line-height:1}
+#s1 h2{font-size:20px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:20px}
+#s1 .btn-g{font-size:17px;padding:14px 52px;box-shadow:0 4px 24px rgba(255,110,180,.4)}
+#s2{align-items:stretch}
+.s2-left{width:260px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:24px 20px}
+.s2-logo{font-size:17px;font-weight:900;color:#fff;margin-bottom:4px}
+.s2-left .btn-g,.s2-left .btn-gh{font-size:15px;padding:12px 20px;text-align:center;width:100%}
+.s2-right{flex:1;display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;padding:16px 18px;gap:10px}
+.mascot-sm{width:52px;height:52px;border-radius:50%;font-size:26px;background:linear-gradient(135deg,#2a0a3a,#4a1060);border:2px solid var(--pink);display:flex;align-items:center;justify-content:center}
+#s3{flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+#s3 h2{font-size:22px;font-weight:900;color:#fff}
+.name-card{padding:20px;width:340px;display:flex;flex-direction:column;gap:10px}
+.f-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.f-in{width:100%;padding:11px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;outline:none;text-align:center}
+.f-in::placeholder{color:rgba(255,255,255,.25);font-size:14px}
+#s4{flex-direction:column;padding:14px 18px;gap:10px}
+.lobby-hdr{display:flex;align-items:center;gap:10px}
+.host-tag{display:flex;align-items:center;gap:8px;background:rgba(255,215,0,.18);border:1.5px solid rgba(255,215,0,.35);border-radius:999px;padding:7px 14px}
+.h-avatar{width:26px;height:26px;border-radius:50%;font-size:14px;background:linear-gradient(135deg,#2a0a3a,#4a1060);border:1.5px solid var(--pink);display:flex;align-items:center;justify-content:center}
+.code-tag{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.22);border-radius:999px;padding:7px 14px}
+.c-lbl{font-size:9px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.07em}
+.c-val{font-size:15px;font-weight:900;color:#fff;letter-spacing:2px}
+.leave{background:#ef4444;border:none;border-radius:8px;color:#fff;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer;margin-left:auto}
+.lobby-body{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;min-height:0}
+.l-panel{padding:12px 14px;overflow-y:auto}
+.p-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.08);margin-bottom:5px}
+.p-av{width:28px;height:28px;border-radius:50%;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#1a1a3a,#3a2a6a)}
+.p-name{flex:1;font-size:13px;font-weight:700;color:#fff}
+.p-sub{font-size:10px;color:rgba(255,255,255,.45)}
+.lobby-footer{display:flex;justify-content:flex-end;align-items:flex-end}
+.start-sub{font-size:10px;color:rgba(255,255,255,.45);font-weight:600;text-align:right;margin-top:4px}
+#s5{flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
+#s5 h2{font-size:22px;font-weight:900;color:#fff}
+.join-card{padding:20px;width:340px;display:flex;flex-direction:column;gap:12px}
+.code-in{width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;letter-spacing:4px;outline:none;text-transform:uppercase;text-align:center}
+.code-in::placeholder{color:rgba(255,255,255,.2);font-size:14px;letter-spacing:1px}
+#s6{flex-direction:row;align-items:center;justify-content:center;gap:24px;padding:20px 28px}
+.w-left{display:flex;flex-direction:column;align-items:center;gap:10px;width:220px}
+.w-left h2{font-size:20px;font-weight:900;color:#fff;text-align:center}
+.w-left p{font-size:12px;color:rgba(255,255,255,.6);text-align:center}
+.code-box{padding:10px 22px;text-align:center}
+.code-box .cl{font-size:9px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+.code-box .cv{font-size:24px;font-weight:900;letter-spacing:4px;color:#fff}
+.dot-row{display:flex;gap:5px;justify-content:center}
+.w-right{display:flex;flex-direction:column;gap:8px;width:260px}
+.w-panel{padding:12px 14px}
+.wl{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="phone">
+<div class="bg">
+  <svg viewBox="0 0 812 375" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="sg" cx="50%" cy="42%" r="32%"><stop offset="0%" stop-color="#fff5c0" stop-opacity=".75"/><stop offset="100%" stop-color="#87ceeb" stop-opacity="0"/></radialGradient></defs>
+    <rect width="812" height="375" fill="url(#sg)"/>
+    <circle cx="406" cy="130" r="30" fill="#fff9dc" opacity=".8"/>
+    <polygon points="0,375 110,155 210,250 170,375" fill="#1a4a2e" opacity=".85"/>
+    <polygon points="50,375 160,120 270,200 230,375" fill="#0d3a20" opacity=".9"/>
+    <polygon points="812,375 680,145 590,230 630,375" fill="#1a4a2e" opacity=".85"/>
+    <polygon points="762,375 640,110 550,195 590,375" fill="#0d3a20" opacity=".9"/>
+    <rect x="38" y="200" width="18" height="55" fill="#2d1b4e" opacity=".7" rx="2"/><polygon points="38,200 47,178 56,200" fill="#3d2060" opacity=".7"/>
+    <rect x="740" y="195" width="20" height="60" fill="#1a2a5e" opacity=".7" rx="2"/><polygon points="740,195 750,170 760,195" fill="#2a3a7e" opacity=".7"/>
+    <rect x="384" y="148" width="44" height="110" fill="#3a2060" opacity=".75" rx="2"/>
+    <circle cx="406" cy="168" r="15" fill="none" stroke="#ffd700" stroke-width="2" opacity=".85"/>
+    <line x1="406" y1="168" x2="406" y2="158" stroke="#ffd700" stroke-width="1.5" opacity=".85"/>
+    <line x1="406" y1="168" x2="413" y2="173" stroke="#ffd700" stroke-width="1.5" opacity=".85"/>
+    <polygon points="406,128 391,150 421,150" fill="#4a2880" opacity=".8"/>
+    <ellipse cx="180" cy="210" rx="140" ry="155" fill="none" stroke="rgba(180,160,255,0.18)" stroke-width="14"/>
+    <ellipse cx="632" cy="210" rx="140" ry="155" fill="none" stroke="rgba(180,160,255,0.18)" stroke-width="14"/>
+    <ellipse cx="406" cy="340" rx="340" ry="55" fill="#1a3a6e" opacity=".55"/>
+    <rect x="300" y="305" width="212" height="9" fill="#5a4a2a" opacity=".7" rx="3"/>
+    <g opacity=".65">
+      <ellipse cx="298" cy="355" rx="8" ry="18" fill="#0a0a18"/><circle cx="298" cy="331" r="8" fill="#0a0a18"/>
+      <ellipse cx="340" cy="353" rx="8" ry="20" fill="#100820"/><circle cx="340" cy="327" r="9" fill="#100820"/>
+      <ellipse cx="378" cy="355" rx="7" ry="17" fill="#0a0a18"/><circle cx="378" cy="332" r="7" fill="#0a0a18"/>
+      <ellipse cx="406" cy="353" rx="9" ry="20" fill="#08102e"/><circle cx="406" cy="327" r="9" fill="#08102e"/>
+      <ellipse cx="440" cy="355" rx="7" ry="18" fill="#0a0a18"/><circle cx="440" cy="331" r="7" fill="#0a0a18"/>
+      <ellipse cx="474" cy="354" rx="8" ry="19" fill="#100820"/><circle cx="474" cy="329" r="8" fill="#100820"/>
+      <ellipse cx="510" cy="355" rx="7" ry="17" fill="#0a0a18"/><circle cx="510" cy="332" r="7" fill="#0a0a18"/>
+    </g>
+  </svg>
+</div>
+<div class="overlay"></div>
+
+<!-- S1 LANDING -->
+<div class="screen active" id="s1">
+  <h1>Rogue AI</h1>
+  <h2>Trapped in VR</h2>
+  <button class="btn-g" onclick="go('s2')">Start Game</button>
+</div>
+
+<!-- S2 HOME -->
+<div class="screen" id="s2">
+  <div class="s2-left">
+    <div class="s2-logo">Rogue AI: Trapped in VR</div>
+    <button class="btn-g" onclick="go('s3')">Host Game</button>
+    <button class="btn-g" onclick="go('s5')">Join Private Game</button>
+    <button class="btn-gh" style="font-size:15px;padding:12px 20px;text-align:center;width:100%">Join Public Game</button>
+  </div>
+  <div class="s2-right">
+    <div class="mascot-sm">😈</div>
+    <button style="background:var(--grad);border:none;border-radius:999px;color:#fff;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;padding:8px 16px;cursor:pointer;margin-top:auto">🛒 Store</button>
+  </div>
+</div>
+
+<!-- S3 HOST NAME -->
+<div class="screen" id="s3">
+  <button class="back" onclick="go('s2')">←</button>
+  <h2>What's your name?</h2>
+  <div class="name-card glass">
+    <div>
+      <div class="f-label">Your name</div>
+      <input class="f-in" id="host-name" maxlength="14" placeholder="Enter your name" autocomplete="off">
+    </div>
+    <div id="s3-err" class="err"></div>
+    <button class="btn-g" id="host-btn" onclick="createGame()" style="font-size:14px;padding:12px;width:100%">Create Lobby →</button>
+  </div>
+</div>
+
+<!-- S4 HOST LOBBY -->
+<div class="screen" id="s4">
+  <div class="lobby-hdr">
+    <div class="host-tag">
+      <div class="h-avatar">😈</div>
+      <span id="lobby-host-name">Host</span>
+    </div>
+    <div class="code-tag">
+      <div>
+        <div class="c-lbl">Lobby Code</div>
+        <div class="c-val" id="lobby-code">------</div>
+      </div>
+    </div>
+    <button class="leave" onclick="leaveGame()">Leave</button>
+  </div>
+  <div class="lobby-body">
+    <div class="l-panel glass">
+      <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.9);margin-bottom:10px" id="lobby-count">Players: 0</div>
+      <div id="lobby-players"></div>
+    </div>
+    <div class="l-panel glass">
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Settings</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:2">
+        Sections: <strong style="color:#fff">4</strong><br>
+        Starting HP: <strong style="color:#fff">100</strong><br>
+        Poison: <strong style="color:#ff6eb4">10</strong> · Damage: <strong style="color:#c084fc">20</strong> · Heal: <strong style="color:#4ade80">10</strong>
+      </div>
+    </div>
+  </div>
+  <div class="lobby-footer">
+    <div>
+      <button class="btn-g" id="start-btn" onclick="startGame()" disabled style="font-size:14px;padding:11px 22px">Start Game →</button>
+      <div class="start-sub" id="start-sub">Need at least 3 players</div>
+    </div>
+  </div>
+</div>
+
+<!-- S5 JOIN -->
+<div class="screen" id="s5">
+  <button class="back" onclick="go('s2')">←</button>
+  <h2>Join a game</h2>
+  <div class="join-card glass">
+    <div>
+      <div class="f-label">Lobby code</div>
+      <input class="code-in" id="join-code" maxlength="6" placeholder="ABC123" oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+    </div>
+    <div>
+      <div class="f-label">Your name</div>
+      <input class="f-in" id="join-name" maxlength="14" placeholder="Enter your name" autocomplete="off">
+    </div>
+    <div id="s5-err" class="err"></div>
+    <button class="btn-g" id="join-btn" onclick="joinGame()" style="font-size:14px;padding:12px;width:100%">Join →</button>
+  </div>
+</div>
+
+<!-- S6 PLAYER WAITING -->
+<div class="screen" id="s6">
+  <div class="w-left">
+    <div style="font-size:44px">🔐</div>
+    <h2>You're in!</h2>
+    <p>Waiting for the host to start…</p>
+    <div class="code-box glass">
+      <div class="cl">Lobby code</div>
+      <div class="cv" id="waiting-code">------</div>
+    </div>
+    <div class="dot-row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
+  <div class="w-right">
+    <div class="w-panel glass">
+      <div class="wl">Players in lobby</div>
+      <div id="waiting-players"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /phone -->
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const URL  = 'https://rpciorcoksfadwobnywh.supabase.co';
+const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwY2lvcmNva3NmYWR3b2JueXdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTA3ODgsImV4cCI6MjA5NzA2Njc4OH0.Vhp8BZ-mdn6yjOgdhmxFld1wUvSPMRJkAtMvw4PBaqI';
+const REST = URL + '/rest/v1';
+const HDR  = { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+const AVATARS = ['🦊','🐺','🦁','🐯','🐻','🦅','🐉','🦋'];
+
+// ── STATE ─────────────────────────────────────────────────────
+let S = { gameId:null, gameCode:null, playerId:null, isHost:false, pollTimer:null };
+
+// ── REST HELPERS ──────────────────────────────────────────────
+async function dbGet(table, params) {
+  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  const r = await fetch(`${REST}/${table}?${qs}`, { headers: HDR });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.message || d.details || 'DB error');
+  return d;
+}
+
+async function dbPost(table, body) {
+  const r = await fetch(`${REST}/${table}`, { method:'POST', headers: HDR, body: JSON.stringify(body) });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.message || d.details || 'DB error');
+  return Array.isArray(d) ? d[0] : d;
+}
+
+async function dbPatch(table, params, body) {
+  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  const r = await fetch(`${REST}/${table}?${qs}`, { method:'PATCH', headers: HDR, body: JSON.stringify(body) });
+  if (!r.ok) { const d = await r.json(); throw new Error(d.message || 'DB error'); }
+}
+
+async function dbDelete(table, params) {
+  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  await fetch(`${REST}/${table}?${qs}`, { method:'DELETE', headers: HDR });
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setBtn(id, loading, text) {
+  const b = document.getElementById(id);
+  if (!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? `<span class="spinner"></span>${text}` : text;
+}
+
+function randCode() {
+  return Array.from({length:6}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+}
+
+function renderPlayers(players, containerId) {
+  document.getElementById(containerId).innerHTML = players.map(p => `
+    <div class="p-row">
+      <div class="p-av">${p.avatar}</div>
+      <div style="flex:1">
+        <div class="p-name">${p.name}${p.is_host?' <span style="font-size:10px;color:var(--pink)">host</span>':''}</div>
+        <div class="p-sub">${p.hp} HP</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── POLLING ───────────────────────────────────────────────────
+function startPolling(gameId, isHost) {
+  stopPolling();
+  poll(gameId, isHost);
+  S.pollTimer = setInterval(() => poll(gameId, isHost), 2500);
+}
+
+function stopPolling() {
+  if (S.pollTimer) { clearInterval(S.pollTimer); S.pollTimer = null; }
+}
+
+async function poll(gameId, isHost) {
+  try {
+    const players = await dbGet('players', { game_id: `eq.${gameId}`, order: 'joined_at.asc' });
+    const n = players.length;
+
+    if (isHost) {
+      document.getElementById('lobby-count').textContent = `Players: ${n}`;
+      const startBtn = document.getElementById('start-btn');
+      startBtn.disabled = n < 3;
+      document.getElementById('start-sub').textContent = n < 3 ? `Need at least 3 players (${n} joined)` : `${n} players ready — start when you like`;
+      renderPlayers(players, 'lobby-players');
+    } else {
+      renderPlayers(players, 'waiting-players');
+      // Check if host started
+      const games = await dbGet('games', { id: `eq.${gameId}`, select: 'status' });
+      if (games[0]?.status === 'active') {
+        stopPolling();
+        alert('🎮 Game started! (wire game screen here)');
+      }
+    }
+  } catch(e) { /* silent — next tick will retry */ }
+}
+
+// ── HOST: CREATE GAME ─────────────────────────────────────────
+async function createGame() {
+  const name = document.getElementById('host-name').value.trim();
+  if (!name) { document.getElementById('s3-err').textContent = 'Enter your name first'; return; }
+  document.getElementById('s3-err').textContent = '';
+  setBtn('host-btn', true, 'Creating…');
+
+  try {
+    const code = randCode();
+
+    const game = await dbPost('games', {
+      code, status:'waiting', host_name:name,
+      ns:4, start_hp:100, dmg_p:10, dmg_d:20, dmg_h:10,
+      mix_n:25, mix_h:25, mix_p:25, mix_d:25
+    });
+
+    const player = await dbPost('players', {
+      game_id: game.id, name, avatar:'😈', is_host:true, hp:game.start_hp
+    });
+
+    S.gameId   = game.id;
+    S.gameCode = code;
+    S.playerId = player.id;
+    S.isHost   = true;
+
+    document.getElementById('lobby-host-name').textContent = name;
+    document.getElementById('lobby-code').textContent = code;
+    go('s4');
+    startPolling(game.id, true);
+
+  } catch(e) {
+    document.getElementById('s3-err').textContent = e.message;
+  } finally {
+    setBtn('host-btn', false, 'Create Lobby →');
+  }
+}
+
+// ── PLAYER: JOIN GAME ─────────────────────────────────────────
+async function joinGame() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  const name = document.getElementById('join-name').value.trim();
+  if (code.length < 6) { document.getElementById('s5-err').textContent = 'Enter the 6-character code'; return; }
+  if (!name)           { document.getElementById('s5-err').textContent = 'Enter your name'; return; }
+  document.getElementById('s5-err').textContent = '';
+  setBtn('join-btn', true, 'Joining…');
+
+  try {
+    const games = await dbGet('games', { code: `eq.${code}`, status: 'eq.waiting' });
+    if (!games.length) throw new Error('Game not found or already started');
+    const game = games[0];
+
+    const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+    const player = await dbPost('players', {
+      game_id: game.id, name, avatar, is_host:false, hp:game.start_hp
+    });
+
+    S.gameId   = game.id;
+    S.gameCode = code;
+    S.playerId = player.id;
+    S.isHost   = false;
+
+    document.getElementById('waiting-code').textContent = code;
+    go('s6');
+    startPolling(game.id, false);
+
+  } catch(e) {
+    document.getElementById('s5-err').textContent = e.message;
+  } finally {
+    setBtn('join-btn', false, 'Join →');
+  }
+}
+
+// ── HOST: START GAME ──────────────────────────────────────────
+async function startGame() {
+  if (!S.gameId) return;
+  setBtn('start-btn', true, 'Starting…');
+  try {
+    await dbPatch('games', { id: `eq.${S.gameId}` }, { status:'active' });
+    stopPolling();
+    alert('🎮 Game started! (wire game screen here)');
+  } catch(e) {
+    setBtn('start-btn', false, 'Start Game →');
+    alert('Error: ' + e.message);
+  }
+}
+
+// ── LEAVE ─────────────────────────────────────────────────────
+async function leaveGame() {
+  stopPolling();
+  if (S.playerId) await dbDelete('players', { id: `eq.${S.playerId}` });
+  S = { gameId:null, gameCode:null, playerId:null, isHost:false, pollTimer:null };
+  go('s2');
+}
+</script>
+</body>
+</html>
