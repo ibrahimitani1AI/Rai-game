@@ -99,27 +99,42 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 .effect-line{font-size:12px;color:rgba(255,255,255,.8);text-align:center;min-height:16px;font-weight:600}
 .taunt-banner{background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:6px 14px;font-size:12px;font-weight:700;color:#fca5a5;text-align:center;display:none;animation:fadein .4s ease}
 @keyframes fadein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-.doors-wrap{display:flex;align-items:center;justify-content:center;gap:12px;flex:1}
-.door-btn{width:90px;height:90px;border-radius:16px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;color:#fff;gap:4px;font-family:'Nunito',sans-serif}
-.door-btn:hover:not(.voted){background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);transform:scale(1.05)}
-.door-btn.voted{background:var(--grad);border-color:transparent;transform:scale(1.05);cursor:default}
-.door-btn .dn{font-size:24px;font-weight:900}
-.door-btn .dl{font-size:9px;color:rgba(255,255,255,.65);font-weight:600}
-.vstatus{font-size:11px;color:rgba(255,255,255,.45);text-align:center}
-.xbtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.45);font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0}
+/* DOOR CARDS — shared by player and RAI */
+.doors-wrap{display:flex;align-items:stretch;justify-content:center;gap:8px;flex:1;padding:0 4px}
+.door-card{
+  flex:1;max-width:160px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.06) 100%);
+  border:2px solid rgba(255,255,255,.2);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  cursor:pointer;transition:all .15s;color:#fff;font-family:'Nunito',sans-serif;
+  position:relative;overflow:hidden;padding:10px 8px 8px;gap:4px;
+}
+.door-card:hover:not(.voted){border-color:rgba(255,255,255,.5);background:linear-gradient(180deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.1) 100%);transform:scale(1.03)}
+.door-card.voted{border-color:var(--pink);background:linear-gradient(180deg,rgba(255,110,180,.35) 0%,rgba(255,110,180,.15) 100%);cursor:default}
+.door-card .door-img{width:100%;flex:1;border-radius:10px;background:linear-gradient(180deg,#2a1a4e,#1a0a2e);min-height:80px;display:flex;align-items:center;justify-content:center;position:relative}
+.door-card .door-img .door-icon{font-size:32px;opacity:.4}
+.door-card .door-num{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.8);z-index:2;line-height:1}
+.door-card .voted-mark{position:absolute;top:4px;right:6px;font-size:11px;color:var(--pink);font-weight:900}
+.door-card .door-room{font-size:10px;font-weight:700;text-align:center;color:rgba(255,255,255,.9);min-height:14px}
+.door-card .door-paths{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;min-height:14px}
+.door-card .dp-tag{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px}
+.door-card .vote-count{font-size:10px;font-weight:700;color:var(--orange);min-height:14px}
+/* TASK ROOM */
+#s-task{flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(10,5,30,.92)}
+.task-ico{font-size:56px}
 /* DISTRACTION */
 #s-dist{flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,.9)}
-.dist-ico{font-size:52px;animation:pulse 1s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 .dist-timer{font-size:34px;font-weight:900;color:var(--pink)}
 /* REVEAL */
-#s-reveal{flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,.88)}
-#s-reveal h2{font-size:20px;font-weight:900;color:#fff}
-.vresults{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-.vrc{padding:10px 18px;border-radius:12px;text-align:center;min-width:90px}
-.vrc .vnum{font-size:26px;font-weight:900;color:#fff}
-.vrc .vcnt{font-size:12px;color:rgba(255,255,255,.7);margin-top:3px}
-.vrc.winner{border:2px solid #ffd700;background:rgba(255,215,0,.15)}
+#s-reveal{flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(0,0,0,.88)}
+#s-reveal h2{font-size:18px;font-weight:900;color:#fff}
+.reveal-doors{display:flex;gap:8px;justify-content:center;align-items:stretch;width:100%;padding:0 12px}
+.reveal-card{flex:1;max-width:160px;border-radius:12px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.reveal-card.winner{border-color:#ffd700;background:rgba(255,215,0,.12)}
+.reveal-card .rv-num{font-size:18px;font-weight:900;color:#fff}
+.rv-room{font-size:11px;font-weight:700;text-align:center;padding:2px 8px;border-radius:6px}
+.rv-votes{font-size:12px;color:rgba(255,255,255,.7);font-weight:600}
+.rv-crown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:16px}
 /* RAI VIEW */
 #s8{flex-direction:column;padding:10px 14px;gap:8px;background:rgba(5,0,15,.85)}
 .rh{display:flex;align-items:center;gap:8px;margin-bottom:2px}
@@ -312,20 +327,31 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
   </div>
 </div>
 
+<!-- TASK ROOM PLACEHOLDER -->
+<div class="screen" id="s-task">
+  <div style="font-size:56px">🔑</div>
+  <div style="font-size:22px;font-weight:900;color:#fff">Task Room</div>
+  <div style="font-size:13px;color:rgba(255,255,255,.55);text-align:center">Complete the task to progress to the next section</div>
+  <div style="font-size:32px;font-weight:900;color:var(--pink);margin-top:8px" id="task-countdown">2</div>
+</div>
+
 <!-- DISTRACTION -->
 <div class="screen" id="s-dist">
-  <div class="dist-ico">🤖</div>
+  <div style="font-size:52px;animation:pulse 1s ease-in-out infinite">🤖</div>
   <div style="font-size:20px;font-weight:900;color:#fff">RAI is thinking…</div>
   <div style="font-size:13px;color:rgba(255,255,255,.55);text-align:center">Votes are being counted. The Rogue AI is making a move.</div>
   <div class="dist-timer" id="dist-num">10</div>
+  <div id="rai-skip-btn" style="display:none;margin-top:4px">
+    <button onclick="skipDistraction()" style="background:var(--grad);border:none;border-radius:999px;color:#fff;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;padding:10px 28px;cursor:pointer">Continue →</button>
+  </div>
   <button onclick="confirmLeave()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:999px;color:rgba(255,255,255,.35);font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:6px 16px;cursor:pointer;margin-top:6px">Leave game</button>
 </div>
 
 <!-- REVEAL -->
 <div class="screen" id="s-reveal">
   <h2>Votes are in!</h2>
-  <div class="vresults" id="reveal-results"></div>
-  <div style="font-size:13px;color:rgba(255,255,255,.65);text-align:center" id="reveal-moving">Moving…</div>
+  <div class="reveal-doors" id="reveal-doors"></div>
+  <div style="font-size:12px;color:rgba(255,255,255,.55);text-align:center" id="reveal-moving">Moving in 2 seconds…</div>
 </div>
 
 <!-- S8 RAI VIEW -->
@@ -719,30 +745,44 @@ function enterGameAfterReveal(){
 function enterRoom(pos){
   const[r,c]=pos;const cell=S.mapData.grid[r][c];
   const key=`${r},${c}`;
-  const prevPos=S.lastPos;
-  const prevKey=prevPos?`${prevPos[0]},${prevPos[1]}`:'';
-  // detect revisit taunt
+  // taunt detection
   const visitCount=S.visited[key]||0;
-  if(visitCount>0&&S.lastPos){
-    if(prevKey===key){
-      // didn't actually move (edge case)
-    } else if(S.visited[prevKey]>1&&pos[0]===prevPos[0]&&pos[1]===prevPos[1]){
-      // same room
-    } else {
-      // check if going back to immediate previous room
-      const isPrevRoom=prevKey&&key===prevKey;
-      if(isPrevRoom){showTaunt('Right back to the same room you came from! 🤦');}
-      else if(visitCount>0){showTaunt('You have been here before! Do better. 🙄');}
+  const prevKey=S.lastPos?`${S.lastPos[0]},${S.lastPos[1]}`:'';
+  if(visitCount>0&&prevKey&&prevKey!==key){
+    if(key===prevKey){/* edge */}
+    else if(S.lastPos&&r===S.lastPos[0]&&c===S.lastPos[1]){}
+    else if(prevKey&&(S.visited[key]||0)>0){
+      // check if immediately previous room
+      const doorMap=S.mapData.doorAssignments[prevKey]||{};
+      const wentBack=Object.values(doorMap).some(({target})=>target[0]===r&&target[1]===c&&
+        S.lastPos&&Object.values(S.mapData.doorAssignments[key]||{}).some(d=>d.target[0]===S.lastPos[0]&&d.target[1]===S.lastPos[1]));
+      if(wentBack)showTaunt('Right back to the same room you came from! 🤦');
+      else showTaunt('You have been here before! Do better. 🙄');
     }
   }
   S.lastPos=[...pos];
-  // apply effect ONCE per room entry
-  if(!S.effectApplied){
-    S.effectApplied=true;
-    applyEffect(cell);
-  }
   S.visited[key]=(S.visited[key]||0)+1;
   S._triggeringDist=false;
+
+  // TASK ROOM — show placeholder 2s then auto-advance to paired N
+  if(cell==='T'){
+    go('s-task');
+    let cd=2;document.getElementById('task-countdown').textContent=cd;
+    const ti=setInterval(()=>{cd--;document.getElementById('task-countdown').textContent=cd;
+      if(cd<=0){clearInterval(ti);
+        // find paired N (immediately to the right)
+        const nc=c+1;
+        if(nc<S.mapData.COLS&&S.mapData.grid[r][nc]==='N'){
+          S.effectApplied=false;enterRoom([r,nc]);
+        }
+      }
+    },1000);
+    return;
+  }
+
+  // apply effect ONCE per room entry
+  if(!S.effectApplied){S.effectApplied=true;applyEffect(cell);}
+
   if(S.role==='rai'){renderRAIView(pos,S.players,{},S.gameSettings);go('s8');}
   else{renderPlayerView(pos);go('s7');}
   startVoteTimer();
@@ -784,22 +824,24 @@ function renderPlayerView(pos){
   document.getElementById('pg-room').textContent=RNAMES[cell]||'Room';
   document.getElementById('pg-effect').textContent=REFF[cell]||'';
   renderMyHP();
-  // viable rooms left
   const vp=calcViablePath(S.mapData.grid,pos,S.mapData.wps,S.mapData.tasks,S.mapData.COLS,S.players.length);
   const vel=document.getElementById('pg-viable');
-  if(vp){vel.textContent=`${vp.length-1} rooms to exit`;vel.style.display='block';}
-  else{vel.textContent='No safe path!';vel.style.color='#ef4444';vel.style.display='block';}
-  // doors
+  if(vp){vel.textContent=`${vp.length-1} rooms to exit`;vel.style.color='var(--orange)';}
+  else{vel.textContent='No safe path!';vel.style.color='#ef4444';}
   const doorMap=S.mapData.doorAssignments[key]||{};
-  const dEl=document.getElementById('pg-doors');
   const entries=Object.entries(doorMap);
+  const dEl=document.getElementById('pg-doors');
   if(!entries.length){dEl.innerHTML='<div style="color:rgba(255,255,255,.4);font-size:13px">No exits</div>';return;}
   dEl.innerHTML=entries.map(([side,{num}])=>{
     const voted=S.myVote===side;
-    return`<button class="door-btn${voted?' voted':''}" onclick="castVote('${side}')">
-      <div class="dn">${num}</div>
-      <div class="dl">${voted?'✓ Voted':'Door '+num}</div>
-    </button>`;
+    return`<div class="door-card${voted?' voted':''}" onclick="castVote('${side}')">
+      <div class="door-img">
+        <span class="door-icon">🚪</span>
+        <div class="door-num">${num}</div>
+        ${voted?'<div class="voted-mark">✓</div>':''}
+      </div>
+      <div class="door-room"></div>
+    </div>`;
   }).join('');
 }
 function renderVoteStatus(players,votes){
@@ -827,10 +869,8 @@ async function castVote(side){
 async function raiCastVote(side){
   if(S.myVote||!S.gameId)return;
   S.myVote=side;
-  // highlight voted button in RAI vote area
-  document.querySelectorAll('#rg-vote-area .door-btn').forEach(b=>{
-    b.classList.toggle('voted',b.dataset.side===side);
-  });
+  const pos=S.gameSettings?.current_pos||S.mapData.start;
+  renderRAIView(pos,S.players,{},S.gameSettings);
   try{
     const gs=await dbGet('games',{id:`eq.${S.gameId}`,select:'current_votes'});
     const votes={...(gs[0]?.current_votes||{}),[S.playerId]:side};
@@ -840,19 +880,26 @@ async function raiCastVote(side){
   }catch(e){}
 }
 
-// ══ DISTRACTION ══════════════════════════════════════════════
 async function triggerDistraction(){
   if(!S.gameId)return;
   try{await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'distraction',phase_started_at:new Date().toISOString()});}catch(e){}
 }
 function startDistraction(g,votes){
-  go('s-dist');const total=g.distraction_timer||10;let secs=total;
+  go('s-dist');
+  // show skip button only for RAI
+  const skipBtn=document.getElementById('rai-skip-btn');
+  if(skipBtn)skipBtn.style.display=S.role==='rai'?'block':'none';
+  const total=g.distraction_timer||10;let secs=total;
   document.getElementById('dist-num').textContent=secs;
   stopDistTimer();
   S.distTimer=setInterval(async()=>{
-    secs--;document.getElementById('dist-num').textContent=secs;
-    if(secs<=0){stopDistTimer();if(S.isHost||S.role==='rai'){await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'reveal'});}}
+    secs--;document.getElementById('dist-num').textContent=Math.max(0,secs);
+    if(secs<=0){stopDistTimer();if(S.isHost||S.role==='rai'){await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'reveal'}).catch(()=>{});}}
   },1000);
+}
+async function skipDistraction(){
+  stopDistTimer();
+  if(S.gameId)await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'reveal'}).catch(()=>{});
 }
 
 // ══ REVEAL ═══════════════════════════════════════════════════
@@ -864,15 +911,22 @@ async function showReveal(g,votes){
   const pos=g.current_pos||S.mapData.start;
   const key=`${pos[0]},${pos[1]}`;
   const doorMap=S.mapData.doorAssignments[key]||{};
-  document.getElementById('reveal-results').innerHTML=Object.entries(doorMap).map(([side,{num}])=>{
-    const cnt=tally[side]||0;const isW=side===winSide;
-    return`<div class="vrc glass${isW?' winner':''}"><div class="vnum">Door ${num}</div><div class="vcnt">${cnt} vote${cnt!==1?'s':''}${isW?' 🏆':''}</div></div>`;
+  // door cards with room type revealed + vote counts
+  document.getElementById('reveal-doors').innerHTML=Object.entries(doorMap).map(([side,{num,target}])=>{
+    const[tr,tc]=target;const cell=S.mapData.grid[tr][tc]||'';
+    const col=RCOL[cell]||'#374151';const cnt=tally[side]||0;const isW=side===winSide;
+    return`<div class="reveal-card${isW?' winner':''}">
+      ${isW?'<div class="rv-crown">🏆</div>':''}
+      <div class="rv-num">Door ${num}</div>
+      <div class="rv-room" style="background:${col}22;color:${col};border:1px solid ${col}44">${RNAMES[cell]||'?'}</div>
+      <div class="rv-votes">${cnt} vote${cnt!==1?'s':''}</div>
+    </div>`;
   }).join('');
   const winDoor=doorMap[winSide];
-  document.getElementById('reveal-moving').textContent=winDoor?`Moving to Door ${winDoor.num}…`:'No votes cast — staying put.';
+  document.getElementById('reveal-moving').textContent=winDoor?`Moving to Door ${winDoor.num} in 2 seconds…`:'No votes — staying put.';
   setTimeout(async()=>{
     if(!winDoor||!S.gameId){
-      if(S.isHost||S.role==='rai')await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'voting',current_votes:{},phase_started_at:new Date().toISOString()});
+      if(S.isHost||S.role==='rai')await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'voting',current_votes:{},phase_started_at:new Date().toISOString()}).catch(()=>{});
       return;
     }
     const[nr,nc]=winDoor.target;
@@ -882,9 +936,9 @@ async function showReveal(g,votes){
       await dbPatch('games',{id:`eq.${S.gameId}`},{
         current_pos:[nr,nc],visited:nv,phase:'voting',
         current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()
-      });
+      }).catch(()=>{});
     }
-  },3000);
+  },2000);
 }
 
 // ══ RAI VIEW ════════════════════════════════════════════════
@@ -896,49 +950,43 @@ function renderRAIView(pos,players,votes,g){
   const vp2=calcViablePath(S.mapData.grid,pos,S.mapData.wps,S.mapData.tasks,S.mapData.COLS,players.length);
   const vrel=document.getElementById('rg-viable');
   if(vp2){vrel.textContent=`${vp2.length-1} to exit`;}else{vrel.textContent='No safe path';}
-  // RAI vote buttons (top of screen)
   const key=`${pr},${pc}`;const doorMap=S.mapData.doorAssignments[key]||{};
+  // clear vote area (no longer used separately)
   const voteArea=document.getElementById('rg-vote-area');
-  voteArea.innerHTML=Object.entries(doorMap).map(([side,{num}])=>`
-    <button class="door-btn${S.myVote===side?' voted':''}" data-side="${side}" onclick="raiCastVote('${side}')"
-      style="width:56px;height:56px;border-radius:10px;font-size:14px">
-      <div class="dn" style="font-size:16px">${num}</div>
-      <div class="dl" style="font-size:8px">${S.myVote===side?'✓':'vote'}</div>
-    </button>`).join('');
-  // Doors panel with room info and paths
+  if(voteArea)voteArea.innerHTML='';
+  // tally and path sets
   const vtally={};Object.values(votes||{}).forEach(s=>{vtally[s]=(vtally[s]||0)+1;});
-  // compute which doors are on which paths
   const fromSec=Math.floor(pc/CPS);
-  // viable path set
   const vpSet=new Set((vp2||[]).map(([r,c])=>`${r},${c}`));
-  // path to M
   const mRooms=[];for(let r=0;r<ROWS;r++)for(let c=0;c<S.mapData.COLS;c++)if(S.mapData.grid[r][c]==='M')mRooms.push([r,c]);
   let mPathSet=new Set();
   for(const[mr,mc] of mRooms){if(Math.floor(mc/CPS)>=fromSec){const p=bfsSeg(S.mapData.grid,[pr,pc],[mr,mc],S.mapData.COLS,null);if(p)p.forEach(([r,c])=>mPathSet.add(`${r},${c}`));break;}}
-  // path to J
   const jRooms=[];for(let r=0;r<ROWS;r++)for(let c=0;c<S.mapData.COLS;c++)if(S.mapData.grid[r][c]==='J')jRooms.push([r,c]);
   let jPathSet=new Set();
   for(const[jr,jc] of jRooms){if(Math.floor(jc/CPS)>=fromSec){const p=bfsSeg(S.mapData.grid,[pr,pc],[jr,jc],S.mapData.COLS,null);if(p)p.forEach(([r,c])=>jPathSet.add(`${r},${c}`));break;}}
 
+  // Door cards — same layout as player but with room info and paths
   const dEl=document.getElementById('rg-doors');
-  dEl.innerHTML=Object.entries(doorMap).map(([side,{num,target}])=>{
+  dEl.innerHTML='<div class="doors-wrap" style="height:100%">'+Object.entries(doorMap).map(([side,{num,target}])=>{
     const[tr,tc]=target;const tc2=S.mapData.grid[tr][tc]||'';
     const col=RCOL[tc2]||'#374151';const vc=vtally[side]||0;
     const tk=`${tr},${tc}`;
     const pathTags=[];
-    if(vpSet.has(tk))pathTags.push(`<span class="rdpath" style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44">viable</span>`);
-    if(mPathSet.has(tk))pathTags.push(`<span class="rdpath" style="background:#ef444422;color:#ef4444;border:1px solid #ef444444">→M</span>`);
-    if(jPathSet.has(tk))pathTags.push(`<span class="rdpath" style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644">→J</span>`);
-    return`<div class="rdrow">
-      <div class="rdnum">${num}</div>
-      <div class="rdinfo">
-        <div class="rdtype" style="color:${col}">${RNAMES[tc2]||'?'}</div>
-        ${pathTags.length?`<div class="rdpaths">${pathTags.join('')}</div>`:''}
+    if(vpSet.has(tk))pathTags.push(`<span class="dp-tag" style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44">viable</span>`);
+    if(mPathSet.has(tk))pathTags.push(`<span class="dp-tag" style="background:#ef444422;color:#ef4444;border:1px solid #ef444444">→M</span>`);
+    if(jPathSet.has(tk))pathTags.push(`<span class="dp-tag" style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644">→J</span>`);
+    const voted=S.myVote===side;
+    return`<div class="door-card${voted?' voted':''}" onclick="raiCastVote('${side}')" data-side="${side}">
+      <div class="door-img">
+        <span class="door-icon">🚪</span>
+        <div class="door-num">${num}</div>
+        ${voted?'<div class="voted-mark">✓</div>':''}
       </div>
-      ${vc?`<div class="rdvote">${vc}v</div>`:''}
+      <div class="door-room" style="color:${col}">${RNAMES[tc2]||'?'}</div>
+      <div class="door-paths">${pathTags.join('')}</div>
+      <div class="vote-count">${vc?`${vc} vote${vc>1?'s':''}`:''}</div>
     </div>`;
-  }).join('');
-  // mini map
+  }).join('')+'</div>';
   renderRAIMap(pos);
 }
 function renderRAIMap(pos){
