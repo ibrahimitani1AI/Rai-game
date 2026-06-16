@@ -402,10 +402,10 @@ const REST=SUPA+'/rest/v1';
 const HDR={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=representation'};
 const AVATARS=['🦊','🐺','🦁','🐯','🐻','🦅','🐉','🦋'];
 const ROWS=7,CPS=3;
-const SAFE=new Set(['S','E','T','N','H']);
 const RNAMES={S:'Start',E:'Exit',T:'Task Room',N:'Neutral',H:'Healing',P:'Poison',D:'Damage',J:'Jump',M:'Death Room'};
 const RCOL={S:'#0ea5e9',E:'#6366f1',T:'#eab308',N:'#374151',H:'#22c55e',P:'#ef4444',D:'#a855f7',J:'#3b82f6',M:'#db2777'};
-const REFF={H:'💚 Healing — everyone gains HP',P:'☠ Poison — everyone loses HP',D:'💥 Trap — one player takes damage',M:'💀 Death room — one player eliminated',T:'🔑 Task room — complete the task',J:'🌀 Teleport — jumping to next section!',S:'You are at the Start',N:'Neutral room',E:'🎉 EXIT REACHED!'};
+const REFF={H:'💚 Healing — everyone gains HP',P:'☠ Poison — everyone loses HP',D:'💥 Trap — one player takes damage',M:'💀 Death room — one player eliminated',T:'🔑 Task room',J:'🌀 Teleport — jumping to next section!',S:'Starting room',N:'Neutral room',E:'🎉 EXIT REACHED!'};
+const SAFE=new Set(['S','E','T','N','H']);
 
 // ══ SETTINGS ═════════════════════════════════════════════════
 const SET={ns:4,shp:100,dp:10,dd:20,dh:10,vt:60,dt:10};
@@ -413,10 +413,14 @@ const SLIM={ns:[2,6],shp:[50,100],dp:[1,50],dd:[5,50],dh:[5,50],vt:[30,300],dt:[
 function adj(k,d){SET[k]=Math.min(SLIM[k][1],Math.max(SLIM[k][0],SET[k]+({shp:10,dd:5,dh:5,vt:30,dt:5}[k]||1)*Math.sign(d)));document.getElementById(k+'-v').textContent=SET[k];}
 
 // ══ STATE ════════════════════════════════════════════════════
-let S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,
-       pollTimer:null,voteTimer:null,distTimer:null,
-       mapData:null,players:[],visited:{},myVote:null,
-       gameSettings:null,lastPhase:null,lastPos:null,effectApplied:false};
+// AUTHORITY MODEL: HOST is the only writer of game state.
+// All devices poll and react. Only players write their own vote.
+let S={
+  gameId:null,gameCode:null,playerId:null,isHost:false,role:null,
+  pollTimer:null,voteTimer:null,distTimer:null,
+  mapData:null,players:[],myVote:null,gameSettings:null,
+  lastPhase:null,lastPos:null,lastPosKey:null,
+};
 
 // ══ REST ═════════════════════════════════════════════════════
 async function dbGet(t,p){const qs=Object.entries(p).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');const r=await fetch(`${REST}/${t}?${qs}`,{headers:HDR});const d=await r.json();if(!r.ok)throw new Error(d.message||'DB error');return d;}
@@ -424,7 +428,7 @@ async function dbPost(t,b){const r=await fetch(`${REST}/${t}`,{method:'POST',hea
 async function dbPatch(t,p,b){const qs=Object.entries(p).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');const r=await fetch(`${REST}/${t}?${qs}`,{method:'PATCH',headers:HDR,body:JSON.stringify(b)});if(!r.ok){const d=await r.json();throw new Error(d.message||'DB error');}}
 async function dbDelete(t,p){const qs=Object.entries(p).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');await fetch(`${REST}/${t}?${qs}`,{method:'DELETE',headers:HDR});}
 
-// ══ UI ════════════════════════════════════════════════════════
+// ══ UI HELPERS ═══════════════════════════════════════════════
 function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function setBtn(id,l,t){const b=document.getElementById(id);if(!b)return;b.disabled=l;b.innerHTML=l?`<span class="sp"></span>${t}`:t;}
 function randCode(){return Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');}
@@ -434,182 +438,16 @@ function raiTab(tab){
   document.querySelector(`.rtab:nth-child(${tab==='doors'?1:tab==='map'?2:3})`).classList.add('on');
   document.getElementById(`rp-${tab}`).classList.add('on');
 }
-
-// ══ VIABLE PATH ROOMS LEFT ═══════════════════════════════════
-function calcViableRoomsLeft(pos){
-  if(!S.mapData)return null;
-  const{grid,COLS,tasks,exit,wps}=S.mapData;
-  const[fr,fc]=pos;const fromSec=Math.floor(fc/CPS);
-  // build waypoints from current pos through remaining T gates to exit
-  const remaining=[pos];
-  for(const[tr,tc,nr,nc] of tasks){const sec=Math.floor(tc/CPS);if(sec>fromSec){remaining.push([tr,tc]);remaining.push([nr,nc]);}}
-  remaining.push(exit);
-  // BFS segment by segment
-  let total=0;
-  for(let i=0;i<remaining.length-1;i++){
-    const seg=bfsSeg(grid,remaining[i],remaining[i+1],COLS,null);
-    if(!seg)return null;
-    total+=seg.length-1;
-  }
-  return total;
-}
-
-// ══ TAUNT SYSTEM ═════════════════════════════════════════════
 function showTaunt(msg){
-  const el=document.getElementById('pg-taunt');
-  if(!el)return;
-  el.textContent='😈 '+msg;
-  el.style.display='block';
-  clearTimeout(el._t);
-  el._t=setTimeout(()=>{el.style.display='none';},5000);
-}
-
-// ══ POLLING ══════════════════════════════════════════════════
-function stopPoll(){if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}}
-function startPoll(gId){stopPoll();doPoll(gId);S.pollTimer=setInterval(()=>doPoll(gId),2000);}
-
-async function doPoll(gId){
-  try{
-    const[players,games]=await Promise.all([
-      dbGet('players',{game_id:`eq.${gId}`,order:'joined_at.asc'}),
-      dbGet('games',{id:`eq.${gId}`})
-    ]);
-    S.players=players;
-    const g=games[0];if(!g)return;
-    S.gameSettings=g;
-    const cur=document.querySelector('.screen.active')?.id;
-
-    // ── LOBBY PHASE ──
-    if(cur==='s4'||cur==='s6'){
-      if(g.status==='active'&&g.grid){
-        S.mapData=g.grid;stopPoll();
-        await assignRole();showRoleReveal();return;
-      }
-      if(S.isHost){
-        const n=players.length;
-        document.getElementById('l-count').textContent=`Players: ${n}`;
-        document.getElementById('start-btn').disabled=n<3;
-        document.getElementById('start-sub').textContent=n<3?`Need at least 3 (${n} joined)`:`${n} ready`;
-        renderLobbyP(players,'l-players');
-      } else {renderLobbyP(players,'w-players');}
-      return;
-    }
-
-    if(!S.mapData)return;
-    const phase=g.phase||'voting';
-    const pos=g.current_pos||S.mapData.start;
-    const posKey=`${pos[0]},${pos[1]}`;
-    const votes=g.current_votes||{};
-
-    // ── NEW ROOM (phase reset to voting with new position) ──
-    if(phase==='voting'&&(S.lastPhase==='reveal'||S.lastPhase==='distraction')){
-      S.lastPhase='voting';S.myVote=null;S.effectApplied=false;
-      enterRoom(pos);return;
-    }
-
-    // ── DISTRACTION ──
-    if(phase==='distraction'&&S.lastPhase!=='distraction'){
-      S.lastPhase='distraction';stopVoteTimer();startDistraction(g,votes);return;
-    }
-    // ── REVEAL ──
-    if(phase==='reveal'&&S.lastPhase!=='reveal'){
-      S.lastPhase='reveal';stopDistTimer();showReveal(g,votes);return;
-    }
-    // ── FINISHED ──
-    if(g.status==='finished'||phase==='finished'){stopPoll();showGameOver(g.winner);return;}
-
-    // ── SYNC WITHIN VOTING ──
-    if(phase==='voting'){
-      S.players=players;
-      const alive=players.filter(p=>p.alive);
-      const vcount=Object.keys(votes).length;
-      if(cur==='s7'){
-        renderVoteStatus(players,votes);
-        renderMyHP();
-        // check if all voted (including RAI)
-        if(vcount>=alive.length&&alive.length>0&&!S._triggeringDist){
-          S._triggeringDist=true;
-          await triggerDistraction();
-        }
-      }
-      if(cur==='s8'){
-        renderRAIView(pos,players,votes,g);
-        if(vcount>=alive.length&&alive.length>0&&!S._triggeringDist){
-          S._triggeringDist=true;
-          await triggerDistraction();
-        }
-      }
-    }
-  }catch(e){/*retry*/}
-}
-
-function renderLobbyP(players,elId){
-  document.getElementById(elId).innerHTML=players.map(p=>`
-    <div class="prow"><div class="pav">${p.avatar}</div>
-    <div style="flex:1;font-size:13px;font-weight:700;color:#fff">${p.name}${p.is_host?' <span style="font-size:10px;color:var(--pink)">host</span>':''}</div></div>`).join('');
-}
-
-// ══ TIMERS ═══════════════════════════════════════════════════
-let voteSecsLeft=60,voteTotalSecs=60;
-function stopVoteTimer(){if(S.voteTimer){clearInterval(S.voteTimer);S.voteTimer=null;}}
-function startVoteTimer(){
-  stopVoteTimer();
-  const total=S.gameSettings?.vote_timer||60;
-  voteSecsLeft=total;voteTotalSecs=total;
-  setRing('pg-arc','pg-tnum',voteSecsLeft,voteTotalSecs);
-  if(S.role==='rai')setRing('rg-arc','rg-tnum',voteSecsLeft,voteTotalSecs);
-  S.voteTimer=setInterval(async()=>{
-    voteSecsLeft--;
-    setRing('pg-arc','pg-tnum',voteSecsLeft,voteTotalSecs);
-    if(S.role==='rai')setRing('rg-arc','rg-tnum',voteSecsLeft,voteTotalSecs);
-    if(voteSecsLeft<=0){stopVoteTimer();if(!S._triggeringDist){S._triggeringDist=true;await triggerDistraction();}}
-  },1000);
+  const el=document.getElementById('pg-taunt');if(!el)return;
+  el.textContent='😈 '+msg;el.style.display='block';
+  clearTimeout(el._t);el._t=setTimeout(()=>{el.style.display='none';},5000);
 }
 function setRing(arcId,numId,s,t){
   const c=125.6,f=Math.max(0,s/t);
   const a=document.getElementById(arcId),n=document.getElementById(numId);
   if(a){a.style.strokeDashoffset=c*(1-f);a.style.stroke=f>0.4?'var(--pink)':'#ef4444';}
-  if(n)n.textContent=s>0?s:'0';
-}
-function stopDistTimer(){if(S.distTimer){clearInterval(S.distTimer);S.distTimer=null;}}
-
-// ══ CREATE GAME ═══════════════════════════════════════════════
-async function createGame(){
-  const name=document.getElementById('host-name').value.trim();
-  if(!name){document.getElementById('s3-err').textContent='Enter your name';return;}
-  document.getElementById('s3-err').textContent='';setBtn('host-btn',true,'Creating…');
-  try{
-    const code=randCode();
-    const g=await dbPost('games',{code,status:'waiting',host_name:name,
-      ns:SET.ns,start_hp:SET.shp,dmg_p:SET.dp,dmg_d:SET.dd,dmg_h:SET.dh,
-      mix_n:25,mix_h:25,mix_p:25,mix_d:25,vote_timer:SET.vt,distraction_timer:SET.dt});
-    const p=await dbPost('players',{game_id:g.id,name,avatar:'😈',is_host:true,hp:g.start_hp,role:'player'});
-    S={...S,gameId:g.id,gameCode:code,playerId:p.id,isHost:true,role:'player',gameSettings:g};
-    document.getElementById('l-hname').textContent=name;
-    document.getElementById('l-code').textContent=code;
-    document.getElementById('l-settings').innerHTML=`Sections:<b style="color:#fff"> ${SET.ns}</b> · HP:<b style="color:#fff"> ${SET.shp}</b><br>P:<b style="color:#ff6eb4"> ${SET.dp}</b> D:<b style="color:#c084fc"> ${SET.dd}</b> H:<b style="color:#4ade80"> ${SET.dh}</b><br>Vote:<b style="color:#fff"> ${SET.vt}s</b> · Dist:<b style="color:#fff"> ${SET.dt}s</b>`;
-    go('s4');startPoll(g.id);
-  }catch(e){document.getElementById('s3-err').textContent=e.message;}
-  finally{setBtn('host-btn',false,'Create Lobby →');}
-}
-
-// ══ JOIN ═════════════════════════════════════════════════════
-async function joinGame(){
-  const code=document.getElementById('join-code').value.trim().toUpperCase();
-  const name=document.getElementById('join-name').value.trim();
-  if(code.length<6){document.getElementById('s5-err').textContent='Enter 6-char code';return;}
-  if(!name){document.getElementById('s5-err').textContent='Enter your name';return;}
-  document.getElementById('s5-err').textContent='';setBtn('join-btn',true,'Joining…');
-  try{
-    const gs=await dbGet('games',{code:`eq.${code}`,status:'eq.waiting'});
-    if(!gs.length)throw new Error('Game not found or already started');
-    const g=gs[0];const av=AVATARS[Math.floor(Math.random()*AVATARS.length)];
-    const p=await dbPost('players',{game_id:g.id,name,avatar:av,is_host:false,hp:g.start_hp,role:'player'});
-    S={...S,gameId:g.id,gameCode:code,playerId:p.id,isHost:false,role:'player',gameSettings:g};
-    document.getElementById('w-code').textContent=code;
-    go('s6');startPoll(g.id);
-  }catch(e){document.getElementById('s5-err').textContent=e.message;}
-  finally{setBtn('join-btn',false,'Join →');}
+  if(n)n.textContent=Math.max(0,s);
 }
 
 // ══ MAP ENGINE ═══════════════════════════════════════════════
@@ -622,7 +460,6 @@ function bfsSeg(grid,s,e,COLS,al){
       if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;const kk=k([nr,nc]);if(vi.has(kk))continue;
       const t=grid[nr][nc];if(!t)continue;if(al&&!al.has(t))continue;
       if(crossWall(c,nc,grid,r))continue;vi.add(kk);q.push([[nr,nc],path.concat([[nr,nc]])]);}}return null;}
-function calcPath(grid,wps,COLS,al){let p=[wps[0]];for(let i=0;i<wps.length-1;i++){const s=bfsSeg(grid,wps[i],wps[i+1],COLS,al);if(!s)return null;p=p.concat(s.slice(1));}return p;}
 function carve(grid,from,to,COLS,r){
   let[row,col]=from;const[er,ec]=to;const vi=new Set([`${row},${col}`]);const stk=[[row,col]];
   for(let _=0;_<ROWS*COLS*8;_++){if(row===er&&col===ec)break;
@@ -630,49 +467,42 @@ function carve(grid,from,to,COLS,r){
     for(const[ddr,ddc,w]of[[0,dc,5],[dr,0,3],[0,-dc,1],[-dr,0,1]]){if(!ddr&&!ddc)continue;
       const nr=row+ddr,nc=col+ddc;if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
       const kk=`${nr},${nc}`;if(vi.has(kk))continue;const ex=grid[nr][nc];
-      if(ex==='T'&&!(nr===er&&nc===ec))continue;if('PDM J'.includes(ex)&&ex.trim())continue;
+      if(ex==='T'&&!(nr===er&&nc===ec))continue;if(ex&&'PDM J'.includes(ex)&&ex.trim())continue;
       for(let i=0;i<w;i++)ca.push([nr,nc]);}
     if(!ca.length){if(stk.length>1){stk.pop();[row,col]=stk[stk.length-1];}continue;}
     const[nr,nc]=ca[Math.floor(r()*ca.length)];vi.add(`${nr},${nc}`);stk.push([nr,nc]);
-    if(!grid[nr][nc]&&!(nr===er&&nc===ec))grid[nr][nc]='N';row=nr;col=nc;}
-}
+    if(!grid[nr][nc]&&!(nr===er&&nc===ec))grid[nr][nc]='N';row=nr;col=nc;}}
 function buildDoors(grid,COLS){
   const A={};
   for(let r=0;r<ROWS;r++){for(let c=0;c<COLS;c++){if(!grid[r][c])continue;
     if(grid[r][c]==='T'){const nc=c+1;A[`${r},${c}`]=nc<COLS&&grid[r][nc]==='N'?{right:{num:1,target:[r,nc]}}:{};continue;}
     const dirs=[[-1,0,'top'],[0,1,'right'],[1,0,'bottom'],[0,-1,'left']];
-    const pass=dirs.filter(([dr,dc])=>{const nr=r+dr,nc=c+dc;
-      if(nr<0||nr>=ROWS||nc<0||nc>=COLS)return false;if(!grid[nr][nc])return false;if(crossWall(c,nc,grid,r))return false;return true;});
+    const pass=dirs.filter(([dr,dc])=>{const nr=r+dr,nc=c+dc;if(nr<0||nr>=ROWS||nc<0||nc>=COLS)return false;if(!grid[nr][nc])return false;if(crossWall(c,nc,grid,r))return false;return true;});
     for(let i=pass.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pass[i],pass[j]]=[pass[j],pass[i]];}
-    const map={};pass.forEach(([dr,dc,side],idx)=>{map[side]={num:idx+1,target:[r+dr,c+dc]};});A[`${r},${c}`]=map;}}
-  return A;}
-function calcViablePath(grid,pos,wps,tasks,COLS,np){
+    const map={};pass.forEach(([dr,dc,side],idx)=>{map[side]={num:idx+1,target:[r+dr,c+dc]};});A[`${r},${c}`]=map;}}return A;}
+function calcViablePath(grid,pos,wps,tasks,COLS,np,dmg){
   const[fr,fc]=pos;const fromSec=Math.floor(fc/CPS);
-  const DMG_P=S.gameSettings?.dmg_p||10,DMG_D=S.gameSettings?.dmg_d||20,DMG_H=S.gameSettings?.dmg_h||10;
-  const cost=t=>t==='P'?DMG_P*np:t==='D'?DMG_D:t==='M'?9999:t==='J'?9999:t==='H'?-DMG_H*np:0;
+  const cost=t=>t==='P'?dmg.p*np:t==='D'?dmg.d:t==='M'?9999:t==='J'?9999:t==='H'?-dmg.h*np:0;
   const remaining=[pos];
-  for(const[tr,tc,nr,nc] of tasks){if(Math.floor(tc/CPS)>fromSec){remaining.push([tr,tc]);remaining.push([nr,nc]);}}
+  for(const[tr,tc,nr2,nc2]of tasks){if(Math.floor(tc/CPS)>fromSec){remaining.push([tr,tc]);remaining.push([nr2,nc2]);}}
   remaining.push(wps[wps.length-1]);
-  let total=0,full=[];
+  let totalCost=0;let fullPath=[];
   for(let i=0;i<remaining.length-1;i++){
-    // dijkstra
     const k=([r,c])=>`${r},${c}`;const dist={};const prev={};const heap=[[0,remaining[i]]];
-    dist[k(remaining[i])]=0;prev[k(remaining[i])]=null;
-    while(heap.length){heap.sort((a,b)=>a[0]-b[0]);const[d,pos2]=heap.shift();const pk=k(pos2);
+    dist[k(remaining[i])]=0;prev[k(remaining[i])]=null;let found=false;
+    while(heap.length){heap.sort((a,b)=>a[0]-b[0]);const[d,p2]=heap.shift();const pk=k(p2);
       if(d>(dist[pk]??Infinity))continue;
-      if(pos2[0]===remaining[i+1][0]&&pos2[1]===remaining[i+1][1]){
-        const path=[];let cur=pos2;while(cur){path.push(cur);cur=prev[k(cur)];}
-        const seg=path.reverse();total+=d;full=i===0?seg:[...full,...seg.slice(1)];break;}
-      const[r,c]=pos2;
-      for(const[nr,nc]of[[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){
-        if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;const t=grid[nr][nc];if(!t)continue;
-        if(crossWall(c,nc,grid,r))continue;
+      if(p2[0]===remaining[i+1][0]&&p2[1]===remaining[i+1][1]){
+        const path=[];let cur=p2;while(cur){path.push(cur);cur=prev[k(cur)];}
+        const seg=path.reverse();totalCost+=d;fullPath=i===0?seg:[...fullPath,...seg.slice(1)];found=true;break;}
+      const[r,c]=p2;
+      for(const[nr,nc]of[[r-1,c],[r+1,c],[r,c-1],[r,c+1]]){if(nr<0||nr>=ROWS||nc<0||nc>=COLS)continue;
+        const t=grid[nr][nc];if(!t)continue;if(crossWall(c,nc,grid,r))continue;
         const nd=d+Math.max(0,cost(t));const nk=k([nr,nc]);
-        if(nd<(dist[nk]??Infinity)){dist[nk]=nd;prev[nk]=pos2;heap.push([nd,[nr,nc]]);}}}
-  }
-  const budget=(S.players.length-1)*(S.gameSettings?.start_hp||100);
-  return total>budget?null:full;
-}
+        if(nd<(dist[nk]??Infinity)){dist[nk]=nd;prev[nk]=p2;heap.push([nd,[nr,nc]]);}}}
+    if(!found)return null;}
+  const budget=(np-1)*(S.gameSettings?.start_hp||100);
+  return totalCost>budget?null:fullPath;}
 function genMap(ns,mix,seed,np){
   const r=rngF(seed);const COLS=ns*CPS;const grid=Array.from({length:ROWS},()=>Array(COLS).fill(''));
   function rE(c0,c1){const ca=[];for(let row=2;row<=ROWS-3;row++)for(let col=c0;col<=c1;col++)if(!grid[row][col])ca.push([row,col]);return ca.length?ca[Math.floor(r()*ca.length)]:null;}
@@ -681,237 +511,258 @@ function genMap(ns,mix,seed,np){
   const tasks=[];
   for(let i=0;i<ns-1;i++){const wc=i*CPS+(CPS-1),nc2=wc+1;const ca=[];
     for(let row=2;row<=ROWS-3;row++)if(!grid[row][wc]&&!grid[row][nc2])ca.push(row);
-    if(!ca.length)continue;const tr=ca[Math.floor(r()*ca.length)];
-    grid[tr][wc]='T';grid[tr][nc2]='N';tasks.push([tr,wc,tr,nc2]);}
-  const wps=[[sr,sc]];for(const[tr,tc,nr,nc] of tasks){wps.push([tr,tc]);wps.push([nr,nc]);}wps.push([er,ec]);
+    if(!ca.length)continue;const tr=ca[Math.floor(r()*ca.length)];grid[tr][wc]='T';grid[tr][nc2]='N';tasks.push([tr,wc,tr,nc2]);}
+  const wps=[[sr,sc]];for(const[tr,tc,nr2,nc2]of tasks){wps.push([tr,tc]);wps.push([nr2,nc2]);}wps.push([er,ec]);
   for(let i=0;i<wps.length-1;i++)carve(grid,wps[i],wps[i+1],COLS,r);
-  const nM=np>=6?2:1;for(let i=0;i<nM;i++){const p=rE(0,COLS-1);if(p){grid[p[0]][p[1]]='M';}}
+  const nM=np>=6?2:1;for(let i=0;i<nM;i++){const p=rE(0,COLS-1);if(p)grid[p[0]][p[1]]='M';}
   const nJ=Math.max(1,ns-2);const els=Array.from({length:ns-1},(_,i)=>i);
   for(let i=els.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[els[i],els[j]]=[els[j],els[i]];}
-  for(const si of els.slice(0,nJ)){const p=rE(si*CPS,(si+1)*CPS-1);if(p){grid[p[0]][p[1]]='J';}}
+  for(const si of els.slice(0,nJ)){const p=rE(si*CPS,(si+1)*CPS-1);if(p)grid[p[0]][p[1]]='J';}
   const empty=[];for(let row=0;row<ROWS;row++)for(let col=0;col<COLS;col++)if(!grid[row][col])empty.push([row,col]);
-  const n2=empty.length;const pool=[];
+  const pool=[];const n2=empty.length;
   const add=(t,pts)=>{const cnt=Math.round(pts/100*n2);for(let i=0;i<cnt;i++)pool.push(t);};
   add('N',mix.n);add('H',mix.h);add('P',mix.p);add('D',mix.d);
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
-  for(let i=0;i<empty.length&&i<pool.length;i++){const[row,col]=empty[i];grid[row][col]=pool[i];}
-  const doorAssignments=buildDoors(grid,COLS);
-  const secs=Array.from({length:ns},(_,i)=>[i*CPS,(i+1)*CPS-1]);
-  // calc clean path
-  const cleanPath=calcPath(grid,wps,COLS,SAFE);
-  return{grid,COLS,ns,secs,start:[sr,sc],exit:[er,ec],wps,tasks,doorAssignments,cleanPath};
-}
+  for(let i=0;i<empty.length&&i<pool.length;i++)grid[empty[i][0]][empty[i][1]]=pool[i];
+  return{grid,COLS,ns,start:[sr,sc],exit:[er,ec],wps,tasks,doorAssignments:buildDoors(grid,COLS)};}
 
-// ══ START GAME ═══════════════════════════════════════════════
+// ══ LOBBY ════════════════════════════════════════════════════
+async function createGame(){
+  const name=document.getElementById('host-name').value.trim();
+  if(!name){document.getElementById('s3-err').textContent='Enter your name';return;}
+  document.getElementById('s3-err').textContent='';setBtn('host-btn',true,'Creating…');
+  try{
+    const code=randCode();
+    const g=await dbPost('games',{code,status:'waiting',host_name:name,ns:SET.ns,start_hp:SET.shp,dmg_p:SET.dp,dmg_d:SET.dd,dmg_h:SET.dh,mix_n:25,mix_h:25,mix_p:25,mix_d:25,vote_timer:SET.vt,distraction_timer:SET.dt});
+    const p=await dbPost('players',{game_id:g.id,name,avatar:'😈',is_host:true,hp:g.start_hp,role:'player'});
+    S.gameId=g.id;S.gameCode=code;S.playerId=p.id;S.isHost=true;S.role='player';S.gameSettings=g;
+    document.getElementById('l-hname').textContent=name;document.getElementById('l-code').textContent=code;
+    document.getElementById('l-settings').innerHTML=`Sections:<b style="color:#fff"> ${SET.ns}</b> · HP:<b style="color:#fff"> ${SET.shp}</b><br>P:<b style="color:#ff6eb4"> ${SET.dp}</b> D:<b style="color:#c084fc"> ${SET.dd}</b> H:<b style="color:#4ade80"> ${SET.dh}</b><br>Vote:<b style="color:#fff"> ${SET.vt}s</b> · Dist:<b style="color:#fff"> ${SET.dt}s</b>`;
+    go('s4');startPoll(g.id);
+  }catch(e){document.getElementById('s3-err').textContent=e.message;}
+  finally{setBtn('host-btn',false,'Create Lobby →');}
+}
+async function joinGame(){
+  const code=document.getElementById('join-code').value.trim().toUpperCase();
+  const name=document.getElementById('join-name').value.trim();
+  if(code.length<6){document.getElementById('s5-err').textContent='Enter 6-char code';return;}
+  if(!name){document.getElementById('s5-err').textContent='Enter your name';return;}
+  document.getElementById('s5-err').textContent='';setBtn('join-btn',true,'Joining…');
+  try{
+    const gs=await dbGet('games',{code:`eq.${code}`,status:'eq.waiting'});
+    if(!gs.length)throw new Error('Game not found or already started');
+    const g=gs[0];const av=AVATARS[Math.floor(Math.random()*AVATARS.length)];
+    const p=await dbPost('players',{game_id:g.id,name,avatar:av,is_host:false,hp:g.start_hp,role:'player'});
+    S.gameId=g.id;S.gameCode=code;S.playerId=p.id;S.isHost=false;S.role='player';S.gameSettings=g;
+    document.getElementById('w-code').textContent=code;go('s6');startPoll(g.id);
+  }catch(e){document.getElementById('s5-err').textContent=e.message;}
+  finally{setBtn('join-btn',false,'Join →');}
+}
 async function startGame(){
-  if(!S.gameId)return;setBtn('start-btn',true,'Generating…');
+  if(!S.gameId||!S.isHost)return;setBtn('start-btn',true,'Generating…');
   try{
     const gs=await dbGet('games',{id:`eq.${S.gameId}`});const g=gs[0];
     const players=await dbGet('players',{game_id:`eq.${S.gameId}`,order:'joined_at.asc'});
     const map=genMap(g.ns,{n:g.mix_n,h:g.mix_h,p:g.mix_p,d:g.mix_d},Math.floor(Math.random()*999999),players.length);
     const raiIdx=Math.floor(Math.random()*players.length);
-    for(const p of players){await dbPatch('players',{id:`eq.${p.id}`},{role:p.id===players[raiIdx].id?'rai':'player'});}
+    for(const p of players)await dbPatch('players',{id:`eq.${p.id}`},{role:p.id===players[raiIdx].id?'rai':'player'});
     const sv={};sv[`${map.start[0]},${map.start[1]}`]=1;
-    await dbPatch('games',{id:`eq.${S.gameId}`},{status:'active',grid:map,current_pos:map.start,
-      visited:sv,step:0,phase:'voting',current_votes:{},phase_started_at:new Date().toISOString()});
+    await dbPatch('games',{id:`eq.${S.gameId}`},{status:'active',grid:map,current_pos:map.start,visited:sv,step:0,phase:'voting',current_votes:{},phase_started_at:new Date().toISOString()});
   }catch(e){alert('Error: '+e.message);setBtn('start-btn',false,'Start Game →');}
 }
+function renderLobbyP(players,elId){
+  document.getElementById(elId).innerHTML=players.map(p=>`
+    <div class="prow"><div class="pav">${p.avatar}</div>
+    <div style="flex:1;font-size:13px;font-weight:700;color:#fff">${p.name}${p.is_host?' <span style="font-size:10px;color:var(--pink)">host</span>':''}</div></div>`).join('');}
 
-// ══ ROLE REVEAL ══════════════════════════════════════════════
+// ══ POLLING ══════════════════════════════════════════════════
+function stopPoll(){if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}}
+function startPoll(gId){stopPoll();doPoll(gId);S.pollTimer=setInterval(()=>doPoll(gId),2000);}
+async function doPoll(gId){
+  try{
+    const[players,games]=await Promise.all([dbGet('players',{game_id:`eq.${gId}`,order:'joined_at.asc'}),dbGet('games',{id:`eq.${gId}`})]);
+    const g=games[0];if(!g)return;
+    S.players=players;S.gameSettings=g;
+    const cur=document.querySelector('.screen.active')?.id;
+    // LOBBY
+    if(cur==='s4'||cur==='s6'){
+      if(g.status==='active'&&g.grid){S.mapData=g.grid;stopPoll();await assignRole();showRoleReveal();return;}
+      if(S.isHost){const n=players.length;document.getElementById('l-count').textContent=`Players: ${n}`;document.getElementById('start-btn').disabled=n<3;document.getElementById('start-sub').textContent=n<3?`Need at least 3 (${n} joined)`:`${n} ready`;renderLobbyP(players,'l-players');}
+      else renderLobbyP(players,'w-players');
+      return;}
+    // Race protection — wait for map
+    if(!S.mapData){if(g.grid)S.mapData=g.grid;else return;}
+    const phase=g.phase||'voting';
+    const pos=Array.isArray(g.current_pos)?g.current_pos:S.mapData.start;
+    const posKey=`${pos[0]},${pos[1]}`;
+    const votes=g.current_votes||{};
+    // FINISHED
+    if(g.status==='finished'||phase==='finished'){stopPoll();showGameOver(g.winner);return;}
+    // PHASE OR POSITION CHANGED
+    if(phase!==S.lastPhase||posKey!==S.lastPosKey){
+      const prevPhase=S.lastPhase;const prevPosKey=S.lastPosKey;
+      S.lastPhase=phase;S.lastPosKey=posKey;
+      if(phase==='voting'&&(prevPhase!=='voting'||posKey!==prevPosKey)){
+        S.myVote=null;
+        // taunt check
+        if(S.lastPos&&prevPosKey){
+          const vis=g.visited||{};const timesHere=vis[posKey]||0;
+          if(timesHere>1){
+            const wentBack=Object.values(S.mapData.doorAssignments[posKey]||{}).some(d=>d.target[0]===S.lastPos[0]&&d.target[1]===S.lastPos[1]);
+            showTaunt(wentBack?'Right back to the same room you came from! 🤦':'You have been here before! Do better. 🙄');
+          }
+        }
+        S.lastPos=[...pos];
+        if(S.isHost)hostApplyEffect(pos,players,g);
+        enterRoomView(pos,votes,g);
+        startVoteTimer(g);
+      }else if(phase==='distraction'&&prevPhase!=='distraction'){
+        stopVoteTimer();startDistractionView(g);
+      }else if(phase==='reveal'&&prevPhase!=='reveal'){
+        stopDistTimer();showRevealView(g,votes);
+      }
+      return;}
+    // SYNC WITHIN PHASE
+    if(phase==='voting'){
+      const alive=players.filter(p=>p.alive);const vcount=Object.keys(votes).length;
+      if(cur==='s7'){renderVoteStatus(players,votes);renderMyHP();}
+      if(cur==='s8'){
+        const vt={};Object.values(votes).forEach(sv=>{vt[sv]=(vt[sv]||0)+1;});
+        document.querySelectorAll('#rg-doors .door-card').forEach(card=>{
+          const vc=vt[card.dataset.side]||0;const el=card.querySelector('.vote-count');
+          if(el)el.textContent=vc?`${vc} vote${vc>1?'s':''}`:' ';});}
+      // HOST: all voted → distraction
+      if(S.isHost&&vcount>=alive.length&&alive.length>0){
+        stopVoteTimer();
+        dbPatch('games',{id:`eq.${S.gameId}`},{phase:'distraction',phase_started_at:new Date().toISOString()}).catch(()=>{});}
+      // HOST: win check from DB
+      if(S.isHost){const ac=players.filter(p=>p.alive).length;if(ac<=2&&players.length>=3)
+        dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'rai'}).catch(()=>{});}
+    }
+    if(phase==='distraction'&&S.isHost&&g.phase_started_at){
+      const el=(Date.now()-new Date(g.phase_started_at).getTime())/1000;
+      if(el>=(g.distraction_timer||10))dbPatch('games',{id:`eq.${S.gameId}`},{phase:'reveal',phase_started_at:new Date().toISOString()}).catch(()=>{});}
+    if(phase==='reveal'&&S.isHost&&g.phase_started_at){
+      const el=(Date.now()-new Date(g.phase_started_at).getTime())/1000;
+      if(el>=2)hostMoveToNextRoom(g,votes);}
+  }catch(e){/*retry*/}}
+
+// ══ ROLE ═════════════════════════════════════════════════════
 async function assignRole(){try{const me=await dbGet('players',{id:`eq.${S.playerId}`});S.role=me[0]?.role||'player';}catch(e){}}
 function showRoleReveal(){
-  if(S.role==='rai'){
-    document.getElementById('role-ico').textContent='😈';
-    document.getElementById('role-title').textContent='You are RAI';
-    document.getElementById('role-sub').textContent='Secretly sabotage the team. Use your abilities. You cannot die.';
-    document.getElementById('role-btn').style.background='linear-gradient(135deg,#ef4444,#b91c1c)';
-  }else{
-    document.getElementById('role-ico').textContent='🎮';
-    document.getElementById('role-title').textContent='You are a Player';
-    document.getElementById('role-sub').textContent='Work with your team to escape. One among you is RAI. Trust no one.';
-  }
-  go('s-role');
-}
-function enterGameAfterReveal(){
-  S.visited={};S.effectApplied=false;S.myVote=null;S._triggeringDist=false;
-  S.lastPhase='voting';
-  const pos=S.mapData?.start||[0,0];
-  S.visited[`${pos[0]},${pos[1]}`]=1;
-  enterRoom(pos);
-  startPoll(S.gameId);
-}
+  if(S.role==='rai'){document.getElementById('role-ico').textContent='😈';document.getElementById('role-title').textContent='You are RAI';document.getElementById('role-sub').textContent='Secretly sabotage the team. You cannot die.';document.getElementById('role-btn').style.background='linear-gradient(135deg,#ef4444,#b91c1c)';}
+  else{document.getElementById('role-ico').textContent='🎮';document.getElementById('role-title').textContent='You are a Player';document.getElementById('role-sub').textContent='Work with your team to escape. One among you is RAI. Trust no one.';}
+  go('s-role');}
+function enterGameAfterReveal(){S.lastPhase=null;S.lastPosKey=null;S.lastPos=null;S.myVote=null;startPoll(S.gameId);}
 
-// ══ ENTER ROOM (only applies effect once) ════════════════════
-function enterRoom(pos){
+// ══ HOST: ROOM EFFECT ════════════════════════════════════════
+async function hostApplyEffect(pos,players,g){
   const[r,c]=pos;const cell=S.mapData.grid[r][c];
-  const key=`${r},${c}`;
-  // taunt detection
-  const visitCount=S.visited[key]||0;
-  const prevKey=S.lastPos?`${S.lastPos[0]},${S.lastPos[1]}`:'';
-  if(visitCount>0&&prevKey&&prevKey!==key){
-    if(key===prevKey){/* edge */}
-    else if(S.lastPos&&r===S.lastPos[0]&&c===S.lastPos[1]){}
-    else if(prevKey&&(S.visited[key]||0)>0){
-      // check if immediately previous room
-      const doorMap=S.mapData.doorAssignments[prevKey]||{};
-      const wentBack=Object.values(doorMap).some(({target})=>target[0]===r&&target[1]===c&&
-        S.lastPos&&Object.values(S.mapData.doorAssignments[key]||{}).some(d=>d.target[0]===S.lastPos[0]&&d.target[1]===S.lastPos[1]));
-      if(wentBack)showTaunt('Right back to the same room you came from! 🤦');
-      else showTaunt('You have been here before! Do better. 🙄');
-    }
-  }
-  S.lastPos=[...pos];
-  S.visited[key]=(S.visited[key]||0)+1;
-  S._triggeringDist=false;
+  const dmgP=g.dmg_p||10,dmgD=g.dmg_d||20,heal=g.dmg_h||10,maxHp=g.start_hp||100;
+  const lp=players.map(p=>({...p}));
+  const alive=()=>lp.filter(p=>p.alive&&p.role!=='rai');
+  let changed=false;
+  if(cell==='P'){lp.forEach(p=>{if(!p.alive)return;p.role==='rai'?p.hp=Math.max(1,p.hp-dmgP):(p.hp=Math.max(0,p.hp-dmgP),p.hp===0&&(p.alive=false));});changed=true;}
+  else if(cell==='D'){const a=alive();if(a.length){const t=a[Math.floor(Math.random()*a.length)];t.hp=Math.max(0,t.hp-dmgD);t.hp===0&&(t.alive=false);changed=true;}}
+  else if(cell==='H'){lp.forEach(p=>{if(p.alive)p.hp=Math.min(maxHp,p.hp+heal);});changed=true;}
+  else if(cell==='M'){const a=alive();if(a.length){const t=a[Math.floor(Math.random()*a.length)];t.hp=0;t.alive=false;changed=true;}}
+  else if(cell==='E'){await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'players'}).catch(()=>{});return;}
+  else if(cell==='J'){
+    const fromSec=Math.floor(c/CPS);const nextSec=fromSec+1;
+    if(nextSec<S.mapData.ns){
+      const c0=nextSec*CPS,c1=c0+CPS-1;const cands=[];
+      for(let row=0;row<ROWS;row++)for(let col=c0;col<=c1;col++)if(S.mapData.grid[row][col]&&S.mapData.grid[row][col]!=='T')cands.push([row,col]);
+      if(cands.length){const dest=cands[Math.floor(Math.random()*cands.length)];
+        const nv={...(g.visited||{})};nv[`${dest[0]},${dest[1]}`]=(nv[`${dest[0]},${dest[1]}`]||0)+1;
+        await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:dest,visited:nv,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()}).catch(()=>{});
+        return;}}return;}
+  if(changed){
+    for(const p of lp){const o=players.find(x=>x.id===p.id);if(o&&(o.hp!==p.hp||o.alive!==p.alive))await dbPatch('players',{id:`eq.${p.id}`},{hp:p.hp,alive:p.alive}).catch(()=>{});}
+    S.players=lp;
+    if(lp.filter(p=>p.alive).length<=2)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'rai'}).catch(()=>{});}}
 
-  // TASK ROOM — show placeholder 2s then auto-advance to paired N
+// ══ HOST: TASK AUTO-ADVANCE ══════════════════════════════════
+async function hostHandleTask(pos,g){
+  const[r,c]=pos;const nc=c+1;
+  if(nc<S.mapData.COLS&&S.mapData.grid[r][nc]==='N'){
+    await new Promise(res=>setTimeout(res,2000));
+    const nv={...(g.visited||{})};nv[`${r},${nc}`]=(nv[`${r},${nc}`]||0)+1;
+    await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:[r,nc],visited:nv,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()}).catch(()=>{});}}
+
+// ══ HOST: MOVE AFTER REVEAL ══════════════════════════════════
+async function hostMoveToNextRoom(g,votes){
+  // guard: only run once (set phase to moving briefly or check elapsed > threshold)
+  if(S._moving)return;S._moving=true;
+  setTimeout(()=>S._moving=false,3000);
+  const tally={};Object.values(votes).forEach(s=>{tally[s]=(tally[s]||0)+1;});
+  let winSide=null,winCount=0;
+  Object.entries(tally).forEach(([s,cnt])=>{if(cnt>winCount||(cnt===winCount&&Math.random()>0.5)){winSide=s;winCount=cnt;}});
+  const pos=Array.isArray(g.current_pos)?g.current_pos:S.mapData.start;
+  const doorMap=S.mapData.doorAssignments[`${pos[0]},${pos[1]}`]||{};
+  const winDoor=doorMap[winSide];
+  if(!winDoor){await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'voting',current_votes:{},phase_started_at:new Date().toISOString()}).catch(()=>{});return;}
+  const[nr,nc]=winDoor.target;
+  const nv={...(g.visited||{})};nv[`${nr},${nc}`]=(nv[`${nr},${nc}`]||0)+1;
+  await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:[nr,nc],visited:nv,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()}).catch(()=>{});}
+
+// ══ VOTE TIMER ═══════════════════════════════════════════════
+let voteSecsLeft=60,voteTotalSecs=60;
+function stopVoteTimer(){if(S.voteTimer){clearInterval(S.voteTimer);S.voteTimer=null;}}
+function startVoteTimer(g){
+  stopVoteTimer();const total=g?.vote_timer||60;voteSecsLeft=total;voteTotalSecs=total;
+  setRing('pg-arc','pg-tnum',voteSecsLeft,voteTotalSecs);if(S.role==='rai')setRing('rg-arc','rg-tnum',voteSecsLeft,voteTotalSecs);
+  S.voteTimer=setInterval(()=>{
+    voteSecsLeft--;setRing('pg-arc','pg-tnum',voteSecsLeft,voteTotalSecs);if(S.role==='rai')setRing('rg-arc','rg-tnum',voteSecsLeft,voteTotalSecs);
+    if(voteSecsLeft<=0){stopVoteTimer();if(S.isHost)dbPatch('games',{id:`eq.${S.gameId}`},{phase:'distraction',phase_started_at:new Date().toISOString()}).catch(()=>{});}
+  },1000);}
+function stopDistTimer(){if(S.distTimer){clearInterval(S.distTimer);S.distTimer=null;}}
+
+// ══ ENTER ROOM VIEW ══════════════════════════════════════════
+function enterRoomView(pos,votes,g){
+  const[r,c]=pos;const cell=S.mapData.grid[r][c];
   if(cell==='T'){
-    go('s-task');
-    let cd=2;document.getElementById('task-countdown').textContent=cd;
-    const ti=setInterval(()=>{cd--;document.getElementById('task-countdown').textContent=cd;
-      if(cd<=0){clearInterval(ti);
-        // find paired N (immediately to the right)
-        const nc=c+1;
-        if(nc<S.mapData.COLS&&S.mapData.grid[r][nc]==='N'){
-          S.effectApplied=false;enterRoom([r,nc]);
-        }
-      }
-    },1000);
-    return;
-  }
-
-  // apply effect ONCE per room entry
-  if(!S.effectApplied){S.effectApplied=true;applyEffect(cell);}
-
-  if(S.role==='rai'){renderRAIView(pos,S.players,{},S.gameSettings);go('s8');}
-  else{renderPlayerView(pos);go('s7');}
-  startVoteTimer();
-}
-
-// ══ ROOM EFFECTS ═════════════════════════════════════════════
-function applyEffect(cell){
-  const g=S.gameSettings;
-  const dmgP=g?.dmg_p||10,dmgD=g?.dmg_d||20,heal=g?.dmg_h||10,maxHp=g?.start_hp||100;
-  const alive=()=>S.players.filter(p=>p.alive&&p.role!=='rai');
-  if(cell==='P'){
-    S.players.forEach(p=>{if(p.alive&&p.role!=='rai'){p.hp=Math.max(0,p.hp-dmgP);if(p.hp===0)p.alive=false;}});
-    // RAI takes reduced poison (floors at 1)
-    const rai=S.players.find(p=>p.role==='rai');if(rai&&rai.alive)rai.hp=Math.max(1,rai.hp-dmgP);
-    checkWin();
-  } else if(cell==='D'){
-    const a=alive();if(a.length){const t=a[Math.floor(Math.random()*a.length)];t.hp=Math.max(0,t.hp-dmgD);if(t.hp===0)t.alive=false;}checkWin();
-  } else if(cell==='H'){
-    S.players.forEach(p=>{if(p.alive)p.hp=Math.min(maxHp,p.hp+heal);});
-  } else if(cell==='M'){
-    const a=alive();if(a.length){const t=a[Math.floor(Math.random()*a.length)];t.hp=0;t.alive=false;}checkWin();
-  } else if(cell==='E'){
-    stopPoll();showGameOver('players');return;
-  }
-  // sync HP
-  S.players.forEach(p=>{dbPatch('players',{id:`eq.${p.id}`},{hp:p.hp,alive:p.alive}).catch(()=>{});});
-}
-function checkWin(){const a=S.players.filter(p=>p.alive);if(a.length<=2){stopPoll();showGameOver('rai');}}
-
-// ══ PLAYER VIEW ══════════════════════════════════════════════
-function renderMyHP(){
-  const me=S.players.find(p=>p.id===S.playerId);if(!me)return;
-  const pct=Math.max(0,me.hp),col=pct>60?'#22c55e':pct>30?'#f59e0b':'#ef4444';
-  document.getElementById('pg-myhp').innerHTML=`<span class="av">${me.avatar}</span><div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:rgba(255,255,255,.6)">${me.name}</div><div class="hbar"><div class="hfill" style="width:${pct}%;background:${col}"></div></div></div><span class="hval">${me.alive?me.hp:'✕'}</span>`;
-}
-function renderPlayerView(pos){
-  const[r,c]=pos;const cell=S.mapData.grid[r][c];
-  const key=`${r},${c}`;
-  document.getElementById('pg-room').textContent=RNAMES[cell]||'Room';
-  document.getElementById('pg-effect').textContent=REFF[cell]||'';
-  renderMyHP();
-  const vp=calcViablePath(S.mapData.grid,pos,S.mapData.wps,S.mapData.tasks,S.mapData.COLS,S.players.length);
-  const vel=document.getElementById('pg-viable');
-  if(vp){vel.textContent=`${vp.length-1} rooms to exit`;vel.style.color='var(--orange)';}
-  else{vel.textContent='No safe path!';vel.style.color='#ef4444';}
-  const doorMap=S.mapData.doorAssignments[key]||{};
-  const entries=Object.entries(doorMap);
-  const dEl=document.getElementById('pg-doors');
-  if(!entries.length){dEl.innerHTML='<div style="color:rgba(255,255,255,.4);font-size:13px">No exits</div>';return;}
-  dEl.innerHTML=entries.map(([side,{num}])=>{
-    const voted=S.myVote===side;
-    return`<div class="door-card${voted?' voted':''}" onclick="castVote('${side}')">
-      <div class="door-img">
-        <span class="door-icon">🚪</span>
-        <div class="door-num">${num}</div>
-        ${voted?'<div class="voted-mark">✓</div>':''}
-      </div>
-      <div class="door-room"></div>
-    </div>`;
-  }).join('');
-}
-function renderVoteStatus(players,votes){
-  const alive=players.filter(p=>p.alive).length;
-  const cast=Object.keys(votes).length;
-  const el=document.getElementById('pg-vstatus');
-  if(el)el.textContent=`${cast} / ${alive} voted`;
-}
+    go('s-task');let cd=2;document.getElementById('task-countdown').textContent=cd;
+    const ti=setInterval(()=>{cd--;document.getElementById('task-countdown').textContent=cd;if(cd<=0)clearInterval(ti);},1000);
+    if(S.isHost)hostHandleTask(pos,g);return;}
+  if(S.role==='rai'){renderRAIView(pos,S.players,votes,g);go('s8');}
+  else{renderPlayerView(pos);go('s7');}}
 
 // ══ CAST VOTE ════════════════════════════════════════════════
 async function castVote(side){
-  if(S.myVote||!S.gameId)return;
-  S.myVote=side;
-  // re-render doors to show voted state
-  const pos=S.gameSettings?.current_pos||S.mapData.start;
-  renderPlayerView(pos);
-  try{
-    const gs=await dbGet('games',{id:`eq.${S.gameId}`,select:'current_votes'});
+  if(S.myVote||!S.gameId)return;S.myVote=side;
+  document.querySelectorAll('#pg-doors .door-card').forEach(card=>{
+    if(card.dataset.side===side){card.classList.add('voted');const vm=card.querySelector('.voted-mark');if(vm)vm.style.display='block';}});
+  try{const gs=await dbGet('games',{id:`eq.${S.gameId}`,select:'current_votes'});
     const votes={...(gs[0]?.current_votes||{}),[S.playerId]:side};
-    await dbPatch('games',{id:`eq.${S.gameId}`},{current_votes:votes});
-    const alive=S.players.filter(p=>p.alive).length;
-    if(Object.keys(votes).length>=alive&&!S._triggeringDist){S._triggeringDist=true;await triggerDistraction();}
-  }catch(e){}
-}
+    await dbPatch('games',{id:`eq.${S.gameId}`},{current_votes:votes});}catch(e){}}
 async function raiCastVote(side){
-  if(S.myVote||!S.gameId)return;
-  S.myVote=side;
-  const pos=S.gameSettings?.current_pos||S.mapData.start;
-  renderRAIView(pos,S.players,{},S.gameSettings);
-  try{
-    const gs=await dbGet('games',{id:`eq.${S.gameId}`,select:'current_votes'});
+  if(S.myVote||!S.gameId)return;S.myVote=side;
+  document.querySelectorAll('#rg-doors .door-card').forEach(card=>{
+    const isSide=card.dataset.side===side;card.classList.toggle('voted',isSide);
+    const vm=card.querySelector('.voted-mark');if(vm)vm.style.display=isSide?'block':'none';});
+  try{const gs=await dbGet('games',{id:`eq.${S.gameId}`,select:'current_votes'});
     const votes={...(gs[0]?.current_votes||{}),[S.playerId]:side};
-    await dbPatch('games',{id:`eq.${S.gameId}`},{current_votes:votes});
-    const alive=S.players.filter(p=>p.alive).length;
-    if(Object.keys(votes).length>=alive&&!S._triggeringDist){S._triggeringDist=true;await triggerDistraction();}
-  }catch(e){}
-}
+    await dbPatch('games',{id:`eq.${S.gameId}`},{current_votes:votes});}catch(e){}}
 
-async function triggerDistraction(){
-  if(!S.gameId)return;
-  try{await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'distraction',phase_started_at:new Date().toISOString()});}catch(e){}
-}
-function startDistraction(g,votes){
-  go('s-dist');
-  // show skip button only for RAI
-  const skipBtn=document.getElementById('rai-skip-btn');
-  if(skipBtn)skipBtn.style.display=S.role==='rai'?'block':'none';
-  const total=g.distraction_timer||10;let secs=total;
-  document.getElementById('dist-num').textContent=secs;
-  stopDistTimer();
-  S.distTimer=setInterval(async()=>{
-    secs--;document.getElementById('dist-num').textContent=Math.max(0,secs);
-    if(secs<=0){stopDistTimer();if(S.isHost||S.role==='rai'){await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'reveal'}).catch(()=>{});}}
-  },1000);
-}
+// ══ DISTRACTION ══════════════════════════════════════════════
+function startDistractionView(g){
+  go('s-dist');const skipBtn=document.getElementById('rai-skip-btn');if(skipBtn)skipBtn.style.display=S.role==='rai'?'block':'none';
+  const total=g.distraction_timer||10;
+  const elapsed=g.phase_started_at?(Date.now()-new Date(g.phase_started_at).getTime())/1000:0;
+  let secs=Math.max(0,Math.ceil(total-elapsed));document.getElementById('dist-num').textContent=secs;
+  stopDistTimer();S.distTimer=setInterval(()=>{secs--;document.getElementById('dist-num').textContent=Math.max(0,secs);if(secs<=0)stopDistTimer();},1000);}
 async function skipDistraction(){
-  stopDistTimer();
-  if(S.gameId)await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'reveal'}).catch(()=>{});
-}
+  if(!S.gameId||S.role!=='rai')return;stopDistTimer();
+  await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'reveal',phase_started_at:new Date().toISOString()}).catch(()=>{});}
 
-// ══ REVEAL ═══════════════════════════════════════════════════
-async function showReveal(g,votes){
+// ══ REVEAL VIEW ══════════════════════════════════════════════
+function showRevealView(g,votes){
   go('s-reveal');
   const tally={};Object.values(votes).forEach(s=>{tally[s]=(tally[s]||0)+1;});
   let winSide=null,winCount=0;
   Object.entries(tally).forEach(([s,cnt])=>{if(cnt>winCount||(cnt===winCount&&Math.random()>0.5)){winSide=s;winCount=cnt;}});
-  const pos=g.current_pos||S.mapData.start;
-  const key=`${pos[0]},${pos[1]}`;
-  const doorMap=S.mapData.doorAssignments[key]||{};
-  // door cards with room type revealed + vote counts
+  const pos=Array.isArray(g.current_pos)?g.current_pos:S.mapData.start;
+  const key=`${pos[0]},${pos[1]}`;const doorMap=S.mapData.doorAssignments[key]||{};
   document.getElementById('reveal-doors').innerHTML=Object.entries(doorMap).map(([side,{num,target}])=>{
     const[tr,tc]=target;const cell=S.mapData.grid[tr][tc]||'';
     const col=RCOL[cell]||'#374151';const cnt=tally[side]||0;const isW=side===winSide;
@@ -920,115 +771,99 @@ async function showReveal(g,votes){
       <div class="rv-num">Door ${num}</div>
       <div class="rv-room" style="background:${col}22;color:${col};border:1px solid ${col}44">${RNAMES[cell]||'?'}</div>
       <div class="rv-votes">${cnt} vote${cnt!==1?'s':''}</div>
-    </div>`;
-  }).join('');
+    </div>`;}).join('');
   const winDoor=doorMap[winSide];
-  document.getElementById('reveal-moving').textContent=winDoor?`Moving to Door ${winDoor.num} in 2 seconds…`:'No votes — staying put.';
-  setTimeout(async()=>{
-    if(!winDoor||!S.gameId){
-      if(S.isHost||S.role==='rai')await dbPatch('games',{id:`eq.${S.gameId}`},{phase:'voting',current_votes:{},phase_started_at:new Date().toISOString()}).catch(()=>{});
-      return;
-    }
-    const[nr,nc]=winDoor.target;
-    const nv={...(g.visited||{})};nv[`${nr},${nc}`]=(nv[`${nr},${nc}`]||0)+1;
-    S.myVote=null;S.effectApplied=false;
-    if(S.isHost||S.role==='rai'){
-      await dbPatch('games',{id:`eq.${S.gameId}`},{
-        current_pos:[nr,nc],visited:nv,phase:'voting',
-        current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()
-      }).catch(()=>{});
-    }
-  },2000);
-}
+  document.getElementById('reveal-moving').textContent=winDoor
+    ?`Moving to Door ${winDoor.num} — ${RNAMES[S.mapData.grid[winDoor.target[0]][winDoor.target[1]]]||'?'}`
+    :'No votes — staying put.';}
+
+// ══ PLAYER VIEW ══════════════════════════════════════════════
+function renderMyHP(){
+  const me=S.players.find(p=>p.id===S.playerId);if(!me)return;
+  const pct=Math.max(0,me.hp),col=pct>60?'#22c55e':pct>30?'#f59e0b':'#ef4444';
+  document.getElementById('pg-myhp').innerHTML=`<span class="av">${me.avatar}</span><div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:rgba(255,255,255,.6)">${me.name}</div><div class="hbar"><div class="hfill" style="width:${pct}%;background:${col}"></div></div></div><span class="hval">${me.alive?me.hp:'✕'}</span>`;}
+function renderPlayerView(pos){
+  const[r,c]=pos;const cell=S.mapData.grid[r][c];const key=`${r},${c}`;
+  document.getElementById('pg-room').textContent=RNAMES[cell]||'Room';
+  document.getElementById('pg-effect').textContent=REFF[cell]||'';
+  renderMyHP();
+  const dmg={p:S.gameSettings?.dmg_p||10,d:S.gameSettings?.dmg_d||20,h:S.gameSettings?.dmg_h||10};
+  const vp=calcViablePath(S.mapData.grid,pos,S.mapData.wps,S.mapData.tasks,S.mapData.COLS,S.players.length,dmg);
+  const vel=document.getElementById('pg-viable');
+  if(vp){vel.textContent=`${vp.length-1} rooms to exit`;vel.style.color='var(--orange)';}
+  else{vel.textContent='No safe path';vel.style.color='#ef4444';}
+  const doorMap=S.mapData.doorAssignments[key]||{};const entries=Object.entries(doorMap);
+  const dEl=document.getElementById('pg-doors');
+  if(!entries.length){dEl.innerHTML='<div style="color:rgba(255,255,255,.4);font-size:13px">No exits</div>';return;}
+  dEl.innerHTML=entries.map(([side,{num}])=>`
+    <div class="door-card" data-side="${side}" onclick="castVote('${side}')">
+      <div class="door-img"><span class="door-icon">🚪</span><div class="door-num">${num}</div><div class="voted-mark" style="display:none">✓</div></div>
+      <div class="door-room"></div>
+    </div>`).join('');}
+function renderVoteStatus(players,votes){
+  const alive=players.filter(p=>p.alive).length;const cast=Object.keys(votes).length;
+  const el=document.getElementById('pg-vstatus');if(el)el.textContent=`${cast} / ${alive} voted`;}
 
 // ══ RAI VIEW ════════════════════════════════════════════════
 function renderRAIView(pos,players,votes,g){
-  if(!S.mapData)return;
-  const[pr,pc]=pos;
+  if(!S.mapData)return;const[pr,pc]=pos;
   document.getElementById('rg-pos').textContent=`${RNAMES[S.mapData.grid[pr][pc]]||'?'} (${pr},${pc})`;
-  // viable count for RAI too
-  const vp2=calcViablePath(S.mapData.grid,pos,S.mapData.wps,S.mapData.tasks,S.mapData.COLS,players.length);
+  const dmg={p:g?.dmg_p||10,d:g?.dmg_d||20,h:g?.dmg_h||10};
+  const vp2=calcViablePath(S.mapData.grid,pos,S.mapData.wps,S.mapData.tasks,S.mapData.COLS,players.length,dmg);
   const vrel=document.getElementById('rg-viable');
   if(vp2){vrel.textContent=`${vp2.length-1} to exit`;}else{vrel.textContent='No safe path';}
   const key=`${pr},${pc}`;const doorMap=S.mapData.doorAssignments[key]||{};
-  // clear vote area (no longer used separately)
-  const voteArea=document.getElementById('rg-vote-area');
-  if(voteArea)voteArea.innerHTML='';
-  // tally and path sets
+  const va=document.getElementById('rg-vote-area');if(va)va.innerHTML='';
   const vtally={};Object.values(votes||{}).forEach(s=>{vtally[s]=(vtally[s]||0)+1;});
   const fromSec=Math.floor(pc/CPS);
   const vpSet=new Set((vp2||[]).map(([r,c])=>`${r},${c}`));
   const mRooms=[];for(let r=0;r<ROWS;r++)for(let c=0;c<S.mapData.COLS;c++)if(S.mapData.grid[r][c]==='M')mRooms.push([r,c]);
-  let mPathSet=new Set();
-  for(const[mr,mc] of mRooms){if(Math.floor(mc/CPS)>=fromSec){const p=bfsSeg(S.mapData.grid,[pr,pc],[mr,mc],S.mapData.COLS,null);if(p)p.forEach(([r,c])=>mPathSet.add(`${r},${c}`));break;}}
+  let mPS=new Set();for(const[mr,mc]of mRooms){if(Math.floor(mc/CPS)>=fromSec){const p=bfsSeg(S.mapData.grid,[pr,pc],[mr,mc],S.mapData.COLS,null);if(p)p.forEach(([r,c])=>mPS.add(`${r},${c}`));break;}}
   const jRooms=[];for(let r=0;r<ROWS;r++)for(let c=0;c<S.mapData.COLS;c++)if(S.mapData.grid[r][c]==='J')jRooms.push([r,c]);
-  let jPathSet=new Set();
-  for(const[jr,jc] of jRooms){if(Math.floor(jc/CPS)>=fromSec){const p=bfsSeg(S.mapData.grid,[pr,pc],[jr,jc],S.mapData.COLS,null);if(p)p.forEach(([r,c])=>jPathSet.add(`${r},${c}`));break;}}
-
-  // Door cards — same layout as player but with room info and paths
+  let jPS=new Set();for(const[jr,jc]of jRooms){if(Math.floor(jc/CPS)>=fromSec){const p=bfsSeg(S.mapData.grid,[pr,pc],[jr,jc],S.mapData.COLS,null);if(p)p.forEach(([r,c])=>jPS.add(`${r},${c}`));break;}}
   const dEl=document.getElementById('rg-doors');
   dEl.innerHTML='<div class="doors-wrap" style="height:100%">'+Object.entries(doorMap).map(([side,{num,target}])=>{
     const[tr,tc]=target;const tc2=S.mapData.grid[tr][tc]||'';
-    const col=RCOL[tc2]||'#374151';const vc=vtally[side]||0;
-    const tk=`${tr},${tc}`;
-    const pathTags=[];
-    if(vpSet.has(tk))pathTags.push(`<span class="dp-tag" style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44">viable</span>`);
-    if(mPathSet.has(tk))pathTags.push(`<span class="dp-tag" style="background:#ef444422;color:#ef4444;border:1px solid #ef444444">→M</span>`);
-    if(jPathSet.has(tk))pathTags.push(`<span class="dp-tag" style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644">→J</span>`);
-    const voted=S.myVote===side;
+    const col=RCOL[tc2]||'#374151';const vc=vtally[side]||0;const tk=`${tr},${tc}`;const voted=S.myVote===side;
+    const tags=[];
+    if(vpSet.has(tk))tags.push(`<span class="dp-tag" style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44">viable</span>`);
+    if(mPS.has(tk))tags.push(`<span class="dp-tag" style="background:#ef444422;color:#ef4444;border:1px solid #ef444444">→M</span>`);
+    if(jPS.has(tk))tags.push(`<span class="dp-tag" style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644">→J</span>`);
     return`<div class="door-card${voted?' voted':''}" onclick="raiCastVote('${side}')" data-side="${side}">
-      <div class="door-img">
-        <span class="door-icon">🚪</span>
-        <div class="door-num">${num}</div>
-        ${voted?'<div class="voted-mark">✓</div>':''}
-      </div>
+      <div class="door-img"><span class="door-icon">🚪</span><div class="door-num">${num}</div><div class="voted-mark" style="display:${voted?'block':'none'}">✓</div></div>
       <div class="door-room" style="color:${col}">${RNAMES[tc2]||'?'}</div>
-      <div class="door-paths">${pathTags.join('')}</div>
-      <div class="vote-count">${vc?`${vc} vote${vc>1?'s':''}`:''}</div>
-    </div>`;
-  }).join('')+'</div>';
-  renderRAIMap(pos);
-}
+      <div class="door-paths">${tags.join('')}</div>
+      <div class="vote-count" data-side="${side}">${vc?`${vc} vote${vc>1?'s':''}`:' '}</div>
+    </div>`;}).join('')+'</div>';
+  renderRAIMap(pos);}
 function renderRAIMap(pos){
-  const[pr,pc]=pos;const COLS=S.mapData.COLS;
-  const div=document.getElementById('rg-map');div.innerHTML='';
-  div.style.gridTemplateColumns=`repeat(${COLS},17px)`;
+  const[pr,pc]=pos;const COLS=S.mapData.COLS;const div=document.getElementById('rg-map');
+  div.innerHTML='';div.style.gridTemplateColumns=`repeat(${COLS},17px)`;
   for(let r=0;r<ROWS;r++){for(let c=0;c<COLS;c++){
     const cell=S.mapData.grid[r][c];const mc=document.createElement('div');
     mc.className='mc'+(r===pr&&c===pc?' cur':'');
-    if(!cell){mc.classList.add('rempty');}
+    if(!cell)mc.classList.add('rempty');
     else{mc.style.background=RCOL[cell]||'#374151';mc.style.color='#fff';mc.textContent=r===pr&&c===pc?'📍':cell;}
-    div.appendChild(mc);}}
-}
+    div.appendChild(mc);}}}
 
 // ══ GAME OVER ════════════════════════════════════════════════
 function showGameOver(winner){
   stopPoll();stopVoteTimer();stopDistTimer();
   const msgs={players:['🎉','Players Win!','The team escaped the VR world.'],rai:['🤖','RAI Wins!','Only 2 players remain.'],abandoned:['🚪','Game Ended','The host left the game.']};
   const[ico,title,msg]=msgs[winner]||msgs.abandoned;
-  document.getElementById('go-ico').textContent=ico;
-  document.getElementById('go-title').textContent=title;
-  document.getElementById('go-msg').textContent=msg;
-  if(S.gameId&&winner!=='abandoned')dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',winner,phase:'finished'}).catch(()=>{});
-  go('s9');
-}
+  document.getElementById('go-ico').textContent=ico;document.getElementById('go-title').textContent=title;document.getElementById('go-msg').textContent=msg;go('s9');}
 
 // ══ LEAVE ════════════════════════════════════════════════════
 function confirmLeave(){
-  const inGame=['s7','s8','s-role','s-dist','s-reveal'].some(id=>document.getElementById(id)?.classList.contains('active'));
+  const inGame=['s7','s8','s-role','s-task','s-dist','s-reveal'].some(id=>document.getElementById(id)?.classList.contains('active'));
   const msg=S.isHost?(inGame?'Leaving will END the game for everyone. Sure?':'Leave lobby?'):(inGame?'Leave the game?':'Leave lobby?');
-  if(confirm(msg))leaveGame();
-}
+  if(confirm(msg))leaveGame();}
 async function leaveGame(){
   stopPoll();stopVoteTimer();stopDistTimer();
   if(S.gameId&&S.isHost)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'abandoned'}).catch(()=>{});
   if(S.playerId)await dbDelete('players',{id:`eq.${S.playerId}`}).catch(()=>{});
-  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,
-     pollTimer:null,voteTimer:null,distTimer:null,
-     mapData:null,players:[],visited:{},myVote:null,gameSettings:null,
-     lastPhase:null,lastPos:null,effectApplied:false,_triggeringDist:false};
-  go('s2');
-}
+  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,_moving:false};
+  go('s2');}
 </script>
 </body>
 </html>
