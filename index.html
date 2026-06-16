@@ -10,8 +10,7 @@
 :root{--grad:linear-gradient(135deg,#ff6eb4,#ffb347);--pink:#ff6eb4;--orange:#ffb347;--glass:rgba(255,255,255,0.12);--gb:rgba(255,255,255,0.22);--r:16px}
 body{background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito',sans-serif}
 .phone{width:812px;height:375px;position:relative;overflow:hidden;border-radius:28px;border:2px solid rgba(255,255,255,0.15);box-shadow:0 24px 80px rgba(0,0,0,.7);flex-shrink:0}
-.bg{position:absolute;inset:0;background:linear-gradient(180deg,#87ceeb 0%,#c8dfff 28%,#ffe8a0 48%,#1a3a6e 68%,#060c1f 100%)}
-.bg svg{position:absolute;inset:0;width:100%;height:100%}
+.bg{position:absolute;inset:0;background:#060c1f}
 .ov{position:absolute;inset:0;background:rgba(8,8,24,0.68)}
 .screen{position:absolute;inset:0;display:none;z-index:10}
 .screen.active{display:flex}
@@ -181,28 +180,9 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 <body>
 <div class="phone">
 <div class="bg">
-  <svg viewBox="0 0 812 375" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-    <defs><radialGradient id="sg" cx="50%" cy="42%" r="32%"><stop offset="0%" stop-color="#fff5c0" stop-opacity=".75"/><stop offset="100%" stop-color="#87ceeb" stop-opacity="0"/></radialGradient></defs>
-    <rect width="812" height="375" fill="url(#sg)"/>
-    <circle cx="406" cy="130" r="30" fill="#fff9dc" opacity=".8"/>
-    <polygon points="0,375 110,155 210,250 170,375" fill="#1a4a2e" opacity=".85"/>
-    <polygon points="50,375 160,120 270,200 230,375" fill="#0d3a20" opacity=".9"/>
-    <polygon points="812,375 680,145 590,230 630,375" fill="#1a4a2e" opacity=".85"/>
-    <polygon points="762,375 640,110 550,195 590,375" fill="#0d3a20" opacity=".9"/>
-    <rect x="384" y="148" width="44" height="110" fill="#3a2060" opacity=".75" rx="2"/>
-    <circle cx="406" cy="168" r="15" fill="none" stroke="#ffd700" stroke-width="2" opacity=".85"/>
-    <polygon points="406,128 391,150 421,150" fill="#4a2880" opacity=".8"/>
-    <ellipse cx="406" cy="340" rx="340" ry="55" fill="#1a3a6e" opacity=".55"/>
-    <g opacity=".65">
-      <ellipse cx="340" cy="355" rx="8" ry="20" fill="#100820"/><circle cx="340" cy="329" r="9" fill="#100820"/>
-      <ellipse cx="378" cy="355" rx="7" ry="17" fill="#0a0a18"/><circle cx="378" cy="332" r="7" fill="#0a0a18"/>
-      <ellipse cx="406" cy="353" rx="9" ry="20" fill="#08102e"/><circle cx="406" cy="327" r="9" fill="#08102e"/>
-      <ellipse cx="440" cy="355" rx="7" ry="18" fill="#0a0a18"/><circle cx="440" cy="331" r="7" fill="#0a0a18"/>
-      <ellipse cx="474" cy="354" rx="8" ry="19" fill="#100820"/><circle cx="474" cy="329" r="8" fill="#100820"/>
-    </g>
-  </svg>
+  <img id="bg-img" src="Homescreen.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top" alt="">
 </div>
-<div class="ov"></div>
+<div class="ov" id="main-ov"></div>
 
 <!-- S1 -->
 <div class="screen active" id="s1">
@@ -429,7 +409,31 @@ async function dbPatch(t,p,b){const qs=Object.entries(p).map(([k,v])=>`${k}=${en
 async function dbDelete(t,p){const qs=Object.entries(p).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');await fetch(`${REST}/${t}?${qs}`,{method:'DELETE',headers:HDR});}
 
 // ══ UI HELPERS ═══════════════════════════════════════════════
-function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+// Background images per screen group
+const BG_MAP={
+  s1:'Homescreen.png',s2:'Homescreen.png',
+  s3:'Lobby_Screen_-_2.png',s4:'Lobby_Screen_-_2.png',
+  s5:'Homescreen.png',s6:'Lobby_Screen_-_2.png',
+  'sr':'Lobby_Screen_-_2.png', // role reveal
+  s7:'Lobby_Screen_-_2.png',s8:'Lobby_Screen_-_2.png',
+  'sd':'Lobby_Screen_-_2.png','sv':'Lobby_Screen_-_2.png',
+  'stask':'Lobby_Screen_-_2.png',s9:'Homescreen.png',
+};
+const BG_DARK={s7:true,s8:true,sd:true,sv:true,stask:true};
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // swap background
+  const key=id.replace('s-','s').replace('-','');
+  const img=document.getElementById('bg-img');
+  const ov=document.getElementById('main-ov');
+  if(img){
+    const src=BG_MAP[key]||BG_MAP[id]||'Homescreen.png';
+    if(img.src.split('/').pop()!==src)img.src=src;
+  }
+  // darken overlay more for game screens
+  if(ov)ov.style.background=BG_DARK[key]?'rgba(4,2,18,0.82)':'rgba(8,8,24,0.68)';
+}
 function setBtn(id,l,t){const b=document.getElementById(id);if(!b)return;b.disabled=l;b.innerHTML=l?`<span class="sp"></span>${t}`:t;}
 function randCode(){return Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');}
 function raiTab(tab){
