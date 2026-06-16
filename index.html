@@ -412,12 +412,12 @@ async function dbDelete(t,p){const qs=Object.entries(p).map(([k,v])=>`${k}=${enc
 // Background images per screen group
 const BG_MAP={
   s1:'Homescreen.png',s2:'Homescreen.png',
-  s3:'Lobby_Screen_-_2.png',s4:'Lobby_Screen_-_2.png',
-  s5:'Homescreen.png',s6:'Lobby_Screen_-_2.png',
-  'sr':'Lobby_Screen_-_2.png', // role reveal
-  s7:'Lobby_Screen_-_2.png',s8:'Lobby_Screen_-_2.png',
-  'sd':'Lobby_Screen_-_2.png','sv':'Lobby_Screen_-_2.png',
-  'stask':'Lobby_Screen_-_2.png',s9:'Homescreen.png',
+  s3:'lobby.png',s4:'lobby.png',
+  s5:'Homescreen.png',s6:'lobby.png',
+  'sr':'lobby.png', // role reveal
+  s7:'lobby.png',s8:'lobby.png',
+  'sd':'lobby.png','sv':'lobby.png',
+  'stask':'lobby.png',s9:'Homescreen.png',
 };
 const BG_DARK={s7:true,s8:true,sd:true,sv:true,stask:true};
 function go(id){
