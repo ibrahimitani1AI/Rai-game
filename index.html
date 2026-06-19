@@ -191,6 +191,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v15 — taunt + ability config</div>
 </div>
 
 <!-- S2 -->
@@ -211,7 +212,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 <div class="screen" id="s3">
   <button class="back" onclick="go('s2')">←</button>
   <h2 style="font-size:20px;font-weight:900;color:#fff">Host a game</h2>
-  <div class="fcard glass">
+  <div class="fcard glass" style="max-height:330px;overflow-y:auto">
     <div><div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px">Your name</div>
     <input class="fin" id="host-name" maxlength="14" placeholder="Enter your name" autocomplete="off"></div>
     <div class="sgrid">
@@ -222,6 +223,16 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
       <div class="srow"><span class="slbl">Healing</span><div class="stpr"><button onclick="adj('dh',-5)">−</button><span id="dh-v">10</span><button onclick="adj('dh',5)">+</button></div></div>
       <div class="srow"><span class="slbl">Vote timer (s)</span><div class="stpr"><button onclick="adj('vt',-30)">−</button><span id="vt-v">60</span><button onclick="adj('vt',30)">+</button></div></div>
       <div class="srow" style="border:none"><span class="slbl">Distraction (s)</span><div class="stpr"><button onclick="adj('dt',-5)">−</button><span id="dt-v">10</span><button onclick="adj('dt',5)">+</button></div></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em;margin:6px 0 2px">RAI Abilities</div>
+    <div class="sgrid">
+      <div class="srow"><span class="slbl">Attack dmg</span><div class="stpr"><button onclick="adj('atk',-5)">−</button><span id="atk-v">30</span><button onclick="adj('atk',5)">+</button></div></div>
+      <div class="srow"><span class="slbl">Lock cooldown</span><div class="stpr"><button onclick="adj('cdl',-1)">−</button><span id="cdl-v">10</span><button onclick="adj('cdl',1)">+</button></div></div>
+      <div class="srow"><span class="slbl">Attack cooldown</span><div class="stpr"><button onclick="adj('cda',-1)">−</button><span id="cda-v">8</span><button onclick="adj('cda',1)">+</button></div></div>
+      <div class="srow"><span class="slbl">Force Vote cd</span><div class="stpr"><button onclick="adj('cdv',-1)">−</button><span id="cdv-v">5</span><button onclick="adj('cdv',1)">+</button></div></div>
+      <div class="srow"><span class="slbl">Laugh cooldown</span><div class="stpr"><button onclick="adj('cdg',-1)">−</button><span id="cdg-v">3</span><button onclick="adj('cdg',1)">+</button></div></div>
+      <div class="srow"><span class="slbl">Accuse cooldown</span><div class="stpr"><button onclick="adj('cdc',-1)">−</button><span id="cdc-v">3</span><button onclick="adj('cdc',1)">+</button></div></div>
+      <div class="srow" style="border:none"><span class="slbl">Suggest cooldown</span><div class="stpr"><button onclick="adj('cds',-1)">−</button><span id="cds-v">3</span><button onclick="adj('cds',1)">+</button></div></div>
     </div>
     <div id="s3-err" class="err"></div>
     <button class="btn-g" id="host-btn" onclick="createGame()" style="font-size:14px;padding:11px;width:100%">Create Lobby →</button>
@@ -460,9 +471,9 @@ const REFF={H:'💚 Healing — everyone gains HP',P:'☠ Poison — everyone lo
 const SAFE=new Set(['S','E','T','N','H']);
 
 // ══ SETTINGS ═════════════════════════════════════════════════
-const SET={ns:4,shp:100,dp:10,dd:20,dh:10,vt:60,dt:10};
-const SLIM={ns:[2,6],shp:[50,100],dp:[1,50],dd:[5,50],dh:[5,50],vt:[30,300],dt:[5,30]};
-function adj(k,d){SET[k]=Math.min(SLIM[k][1],Math.max(SLIM[k][0],SET[k]+({shp:10,dd:5,dh:5,vt:30,dt:5}[k]||1)*Math.sign(d)));document.getElementById(k+'-v').textContent=SET[k];}
+const SET={ns:4,shp:100,dp:10,dd:20,dh:10,vt:60,dt:10,atk:30,cdl:10,cda:8,cdv:5,cdg:3,cdc:3,cds:3};
+const SLIM={ns:[2,6],shp:[50,100],dp:[1,50],dd:[5,50],dh:[5,50],vt:[30,300],dt:[5,30],atk:[5,100],cdl:[1,30],cda:[1,30],cdv:[1,30],cdg:[1,20],cdc:[1,20],cds:[1,20]};
+function adj(k,d){SET[k]=Math.min(SLIM[k][1],Math.max(SLIM[k][0],SET[k]+({shp:10,dd:5,dh:5,vt:30,dt:5,atk:5}[k]||1)*Math.sign(d)));document.getElementById(k+'-v').textContent=SET[k];}
 
 // ══ STATE ════════════════════════════════════════════════════
 // AUTHORITY MODEL: HOST is the only writer of game state.
@@ -608,7 +619,7 @@ async function createGame(){
   document.getElementById('s3-err').textContent='';setBtn('host-btn',true,'Creating…');
   try{
     const code=randCode();
-    const g=await dbPost('games',{code,status:'waiting',host_name:name,ns:SET.ns,start_hp:SET.shp,dmg_p:SET.dp,dmg_d:SET.dd,dmg_h:SET.dh,mix_n:25,mix_h:25,mix_p:25,mix_d:25,vote_timer:SET.vt,distraction_timer:SET.dt});
+    const g=await dbPost('games',{code,status:'waiting',host_name:name,ns:SET.ns,start_hp:SET.shp,dmg_p:SET.dp,dmg_d:SET.dd,dmg_h:SET.dh,mix_n:25,mix_h:25,mix_p:25,mix_d:25,vote_timer:SET.vt,distraction_timer:SET.dt,attack_dmg:SET.atk,cd_lock:SET.cdl,cd_attack:SET.cda,cd_force_vote:SET.cdv,cd_laugh:SET.cdg,cd_accuse:SET.cdc,cd_suggest:SET.cds});
     const p=await dbPost('players',{game_id:g.id,name,avatar:'😈',is_host:true,hp:g.start_hp,role:'player'});
     S.gameId=g.id;S.gameCode=code;S.playerId=p.id;S.isHost=true;S.role='player';S.gameSettings=g;
     document.getElementById('l-hname').textContent=name;document.getElementById('l-code').textContent=code;
