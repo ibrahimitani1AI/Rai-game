@@ -161,6 +161,9 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 .rpow-panel{flex-direction:column;gap:6px;width:100%}
 .rab{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:#fca5a5;cursor:pointer;text-align:left;font-family:'Nunito',sans-serif;width:100%}
 .rab:hover{background:rgba(239,68,68,.25)}
+.taunt-chip{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.25);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif}
+.taunt-chip:hover{background:rgba(255,255,255,.2)}
+.taunt-chip.sel{background:var(--grad);border-color:transparent}
 /* player powers */
 .ppow-row{display:flex;gap:8px;justify-content:center;margin-top:4px}
 .ppow-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:999px;color:rgba(255,255,255,.7);font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:5px 14px;cursor:pointer}
@@ -359,9 +362,33 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
   <div class="rai-panel rdoors-panel on" id="rp-doors"><div id="rg-doors"></div></div>
   <div class="rai-panel rmap-panel" id="rp-map"><div class="mgrid" id="rg-map" style="font-family:monospace"></div></div>
   <div class="rai-panel rpow-panel" id="rp-powers">
-    <button class="rab">Power 1 (placeholder)</button>
-    <button class="rab">Power 2 (placeholder)</button>
-    <button class="rab">Power 3 (placeholder)</button>
+    <button class="rab" onclick="openTauntPicker()">😏 Taunt a player</button>
+    <button class="rab" style="opacity:.4;cursor:not-allowed" disabled>🔒 Lock Door (soon)</button>
+    <button class="rab" style="opacity:.4;cursor:not-allowed" disabled>⚡ Attack (soon)</button>
+    <button class="rab" style="opacity:.4;cursor:not-allowed" disabled>🗳 Force Vote (soon)</button>
+  </div>
+</div>
+
+<!-- TAUNT TARGET PICKER (RAI only) -->
+<div class="screen" id="s-taunt-pick">
+  <div class="rcard glass" style="gap:10px">
+    <div style="font-size:32px">😏</div>
+    <div style="font-size:18px;font-weight:900;color:#fff">Choose a taunt</div>
+    <div id="taunt-type-list" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"></div>
+    <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.5);margin-top:6px">Target player</div>
+    <div id="taunt-player-list" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center"></div>
+    <button onclick="closeTauntPicker()" style="background:none;border:none;color:rgba(255,255,255,.35);font-family:'Nunito',sans-serif;font-size:11px;cursor:pointer;margin-top:6px">Cancel</button>
+  </div>
+</div>
+
+<!-- TAUNT POPUP (shown to everyone) -->
+<div id="taunt-popup" style="display:none;position:absolute;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,.75)">
+  <div class="glass" style="padding:18px 24px;display:flex;align-items:center;gap:14px;max-width:80%;border-color:rgba(239,68,68,.4)">
+    <div style="font-size:40px;flex-shrink:0">😈</div>
+    <div>
+      <div style="font-size:11px;font-weight:900;color:#fca5a5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">RAI says</div>
+      <div id="taunt-popup-text" style="font-size:14px;font-weight:700;color:#fff"></div>
+    </div>
   </div>
 </div>
 
@@ -444,7 +471,7 @@ let S={
   gameId:null,gameCode:null,playerId:null,isHost:false,role:null,
   pollTimer:null,voteTimer:null,distTimer:null,
   mapData:null,players:[],myVote:null,gameSettings:null,
-  lastPhase:null,lastPos:null,lastPosKey:null,
+  lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,
 };
 
 // ══ REST ═════════════════════════════════════════════════════
@@ -644,6 +671,11 @@ async function doPoll(gId){
     const pos=Array.isArray(g.current_pos)?g.current_pos:S.mapData.start;
     const posKey=`${pos[0]},${pos[1]}`;
     const votes=g.current_votes||{};
+    // RAI POPUP (taunt etc) — show once per popup timestamp
+    if(g.rai_popup&&g.rai_popup.ts&&g.rai_popup.ts!==S.lastPopupTs){
+      S.lastPopupTs=g.rai_popup.ts;
+      if(g.rai_popup.type==='taunt')showTauntPopup(g.rai_popup.text);
+    }
     // FINISHED
     if(g.status==='finished'||phase==='finished'){stopPoll();showGameOver(g.winner);return;}
     // PHASE OR POSITION CHANGED
@@ -710,6 +742,8 @@ async function hostApplyEffect(pos,players,g){
   const lp=players.map(p=>({...p}));
   const alive=()=>lp.filter(p=>p.alive&&p.role!=='rai');
   let changed=false;
+  // reset per-room ability usage on every new room entry
+  dbPatch('games',{id:`eq.${S.gameId}`},{abilities_used_this_room:[]}).catch(()=>{});
   if(cell==='P'){lp.forEach(p=>{if(!p.alive)return;p.role==='rai'?p.hp=Math.max(1,p.hp-dmgP):(p.hp=Math.max(0,p.hp-dmgP),p.hp===0&&(p.alive=false));});changed=true;}
   else if(cell==='D'){const a=alive();if(a.length){const t=a[Math.floor(Math.random()*a.length)];t.hp=Math.max(0,t.hp-dmgD);t.hp===0&&(t.alive=false);changed=true;}}
   else if(cell==='H'){lp.forEach(p=>{if(p.alive)p.hp=Math.min(maxHp,p.hp+heal);});changed=true;}
@@ -903,6 +937,81 @@ function showGameOver(winner){
   document.getElementById('go-ico').textContent=ico;document.getElementById('go-title').textContent=title;document.getElementById('go-msg').textContent=msg;go('s9');}
 
 // ══ LEAVE ════════════════════════════════════════════════════
+// ══ TAUNT ABILITY ════════════════════════════════════════════
+const TAUNT_TYPES=[
+  {id:'mocking',label:'😏 Mocking',msgs:[
+    "{name}, did you really think that was a good idea?",
+    "Oh {name}... that's adorable.",
+    "I expected more from {name}. Disappointing."
+  ]},
+  {id:'condescending',label:'🙄 Condescending',msgs:[
+    "{name}, let the smart ones handle this.",
+    "Cute strategy, {name}. Still wrong though.",
+    "{name} is trying so hard. It's almost cute."
+  ]},
+  {id:'threatening',label:'😈 Threatening',msgs:[
+    "{name}, I know exactly where you're going next.",
+    "Keep talking, {name}. See where it gets you.",
+    "{name}... I'd watch my back if I were you."
+  ]},
+  {id:'revisit',label:'🔁 Revisit',msgs:[
+    "Right back to the same room you came from! 🤦 Nice work, {name}.",
+    "You have been here before! Do better, {name}. 🙄"
+  ]}
+];
+let _tauntSelType=null;
+function openTauntPicker(){
+  _tauntSelType=null;
+  const tEl=document.getElementById('taunt-type-list');
+  tEl.innerHTML=TAUNT_TYPES.map(t=>`<button class="taunt-chip" data-id="${t.id}" onclick="selectTauntType('${t.id}')">${t.label}</button>`).join('');
+  const pEl=document.getElementById('taunt-player-list');
+  const targets=S.players.filter(p=>p.role!=='rai'&&p.alive);
+  pEl.innerHTML=targets.map(p=>`<button class="taunt-chip" onclick="sendTaunt('${p.id}','${p.name.replace(/'/g,"\\'")}')">${p.avatar} ${p.name}</button>`).join('');
+  go('s-taunt-pick');
+}
+function selectTauntType(id){
+  _tauntSelType=id;
+  document.querySelectorAll('#taunt-type-list .taunt-chip').forEach(b=>b.classList.toggle('sel',b.dataset.id===id));
+}
+function closeTauntPicker(){go('s8');}
+async function sendTaunt(targetId,targetName){
+  if(!_tauntSelType){alert('Pick a taunt type first');return;}
+  if(!canUseAbility('taunt'))return;
+  const type=TAUNT_TYPES.find(t=>t.id===_tauntSelType);
+  const msg=type.msgs[Math.floor(Math.random()*type.msgs.length)].replace('{name}',targetName);
+  await dbPatch('games',{id:`eq.${S.gameId}`},{
+    rai_popup:{type:'taunt',text:msg,target_player_id:targetId,ts:Date.now()}
+  }).catch(()=>{});
+  await markAbilityUsed('taunt');
+  go('s8');
+}
+function showTauntPopup(text){
+  const el=document.getElementById('taunt-popup');
+  const txt=document.getElementById('taunt-popup-text');
+  txt.textContent=text;
+  el.style.display='flex';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.style.display='none';},4500);
+}
+
+// ══ ABILITY USAGE TRACKING (shared by all powers) ═══════════
+async function canUseAbility(abilityName){
+  try{
+    const gs=await dbGet('games',{id:`eq.${S.gameId}`,select:'abilities_used_this_room'});
+    const used=gs[0]?.abilities_used_this_room||[];
+    if(used.includes(abilityName)){alert('Already used this ability in this room.');return false;}
+    if(used.length>=2){alert('Max 2 abilities per room already used.');return false;}
+    return true;
+  }catch(e){return true;}
+}
+async function markAbilityUsed(abilityName){
+  try{
+    const gs=await dbGet('games',{id:`eq.${S.gameId}`,select:'abilities_used_this_room'});
+    const used=[...(gs[0]?.abilities_used_this_room||[]),abilityName];
+    await dbPatch('games',{id:`eq.${S.gameId}`},{abilities_used_this_room:used});
+  }catch(e){}
+}
+
 function confirmLeave(){
   const inGame=['s7','s8','s-role','s-task','s-dist','s-reveal'].some(id=>document.getElementById(id)?.classList.contains('active'));
   const msg=S.isHost?(inGame?'Leaving will END the game for everyone. Sure?':'Leave lobby?'):(inGame?'Leave the game?':'Leave lobby?');
@@ -911,7 +1020,7 @@ async function leaveGame(){
   stopPoll();stopVoteTimer();stopDistTimer();
   if(S.gameId&&S.isHost)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'abandoned'}).catch(()=>{});
   if(S.playerId)await dbDelete('players',{id:`eq.${S.playerId}`}).catch(()=>{});
-  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,_moving:false};
+  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,_moving:false};
   go('s2');}
 </script>
 </body>
