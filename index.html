@@ -191,7 +191,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v15 — taunt + ability config</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v16 — distraction taunt + abandon-on-close</div>
 </div>
 
 <!-- S2 -->
@@ -335,6 +335,9 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
   <div style="font-size:20px;font-weight:900;color:#fff">RAI is thinking…</div>
   <div style="font-size:13px;color:rgba(255,255,255,.55);text-align:center">Votes are being counted. The Rogue AI is making a move.</div>
   <div class="dist-timer" id="dist-num">10</div>
+  <div id="rai-dist-actions" style="display:none;gap:8px;margin-top:6px">
+    <button onclick="openTauntPicker()" style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);border-radius:999px;color:#fca5a5;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;padding:8px 18px;cursor:pointer">😏 Taunt</button>
+  </div>
   <div id="rai-skip-btn" style="display:none;margin-top:4px">
     <button onclick="skipDistraction()" style="background:var(--grad);border:none;border-radius:999px;color:#fff;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;padding:10px 28px;cursor:pointer">Continue →</button>
   </div>
@@ -840,7 +843,9 @@ async function raiCastVote(side){
 
 // ══ DISTRACTION ══════════════════════════════════════════════
 function startDistractionView(g){
-  go('s-dist');const skipBtn=document.getElementById('rai-skip-btn');if(skipBtn)skipBtn.style.display=S.role==='rai'?'block':'none';
+  go('s-dist');
+  const skipBtn=document.getElementById('rai-skip-btn');if(skipBtn)skipBtn.style.display=S.role==='rai'?'block':'none';
+  const actBtns=document.getElementById('rai-dist-actions');if(actBtns)actBtns.style.display=S.role==='rai'?'flex':'none';
   const total=g.distraction_timer||10;
   const elapsed=g.phase_started_at?(Date.now()-new Date(g.phase_started_at).getTime())/1000:0;
   let secs=Math.max(0,Math.ceil(total-elapsed));document.getElementById('dist-num').textContent=secs;
@@ -971,8 +976,10 @@ const TAUNT_TYPES=[
   ]}
 ];
 let _tauntSelType=null;
+let _tauntOrigin='s8';
 function openTauntPicker(){
   _tauntSelType=null;
+  _tauntOrigin=document.querySelector('.screen.active')?.id||'s8';
   const tEl=document.getElementById('taunt-type-list');
   tEl.innerHTML=TAUNT_TYPES.map(t=>`<button class="taunt-chip" data-id="${t.id}" onclick="selectTauntType('${t.id}')">${t.label}</button>`).join('');
   const pEl=document.getElementById('taunt-player-list');
@@ -984,7 +991,7 @@ function selectTauntType(id){
   _tauntSelType=id;
   document.querySelectorAll('#taunt-type-list .taunt-chip').forEach(b=>b.classList.toggle('sel',b.dataset.id===id));
 }
-function closeTauntPicker(){go('s8');}
+function closeTauntPicker(){go(_tauntOrigin);}
 async function sendTaunt(targetId,targetName){
   if(!_tauntSelType){alert('Pick a taunt type first');return;}
   if(!canUseAbility('taunt'))return;
@@ -994,7 +1001,7 @@ async function sendTaunt(targetId,targetName){
     rai_popup:{type:'taunt',text:msg,target_player_id:targetId,ts:Date.now()}
   }).catch(()=>{});
   await markAbilityUsed('taunt');
-  go('s8');
+  go(_tauntOrigin);
 }
 function showTauntPopup(text){
   const el=document.getElementById('taunt-popup');
@@ -1033,6 +1040,21 @@ async function leaveGame(){
   if(S.playerId)await dbDelete('players',{id:`eq.${S.playerId}`}).catch(()=>{});
   S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,_moving:false};
   go('s2');}
+
+// ══ ABANDON ON CLOSE/REFRESH (best-effort, host only) ════════
+// Uses keepalive fetch so the request has a chance to survive page teardown.
+// Not 100% reliable (crashes, killed wifi won't trigger this) but covers
+// the common case: refresh, tab close, navigating away.
+window.addEventListener('beforeunload',()=>{
+  if(S.gameId&&S.isHost){
+    try{
+      fetch(`${REST}/games?id=eq.${S.gameId}`,{
+        method:'PATCH',headers:HDR,keepalive:true,
+        body:JSON.stringify({status:'finished',phase:'finished',winner:'abandoned'})
+      });
+    }catch(e){}
+  }
+});
 </script>
 </body>
 </html>
