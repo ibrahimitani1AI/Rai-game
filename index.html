@@ -384,6 +384,51 @@ const AVATARS=['🦊','🐺','🦁','🐯','🐻','🦅','🐉','🦋'];
 const ROWS=7,CPS=3;
 const RNAMES={S:'Start',E:'Exit',T:'Task Room',N:'Neutral',H:'Healing',P:'Poison',D:'Damage',J:'Jump',M:'Death Room'};
 const RCOL={S:'#0ea5e9',E:'#6366f1',T:'#eab308',N:'#374151',H:'#22c55e',P:'#ef4444',D:'#a855f7',J:'#3b82f6',M:'#db2777'};
+
+// ══ ROOM BACKGROUNDS ═════════════════════════════════════════
+// Maps room cell type → folder name. S/E/J have no folder, default to neutral.
+const ROOM_FOLDER={H:'healing',P:'poison',D:'damage',M:'murder',N:'neutral',T:'task',E:'exit',J:'jump'};
+const ROOM_IMG_CACHE={}; // folder -> array of working image paths
+const MAX_TRY=12; // try N.png for N up to this number per folder
+
+function loadImg(src){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>res(true);
+    img.onerror=()=>res(false);
+    img.src=src;
+  });
+}
+async function discoverFolder(folder){
+  if(ROOM_IMG_CACHE[folder])return ROOM_IMG_CACHE[folder];
+  const found=[];
+  for(let i=1;i<=MAX_TRY;i++){
+    const path=`rooms/${folder}/${i}.png`;
+    if(await loadImg(path))found.push(path);
+  }
+  ROOM_IMG_CACHE[folder]=found;
+  return found;
+}
+async function preloadAllRoomBgs(){
+  for(const folder of new Set(Object.values(ROOM_FOLDER)))await discoverFolder(folder);
+}
+function getRoomFolder(cell){return ROOM_FOLDER[cell]||'neutral';}
+async function setRoomBackground(cell){
+  const folder=getRoomFolder(cell);
+  let imgs=ROOM_IMG_CACHE[folder];
+  if(!imgs)imgs=await discoverFolder(folder);
+  if(!imgs.length&&folder!=='neutral'){imgs=ROOM_IMG_CACHE['neutral']||await discoverFolder('neutral');}
+  const img=document.getElementById('bg-img');
+  if(!img)return;
+  if(imgs&&imgs.length){
+    const pick=imgs[Math.floor(Math.random()*imgs.length)];
+    img.src=pick;
+    img.style.display='block';
+  }else{
+    // no images anywhere — fall back to plain background colour
+    img.style.display='none';
+  }
+}
 const REFF={H:'💚 Healing — everyone gains HP',P:'☠ Poison — everyone loses HP',D:'💥 Trap — one player takes damage',M:'💀 Death room — one player eliminated',T:'🔑 Task room',J:'🌀 Teleport — jumping to next section!',S:'Starting room',N:'Neutral room',E:'🎉 EXIT REACHED!'};
 const SAFE=new Set(['S','E','T','N','H']);
 
@@ -415,23 +460,22 @@ const BG_MAP={
   s3:'lobby.png',s4:'lobby.png',
   s5:'Homescreen.png',s6:'lobby.png',
   'sr':'lobby.png', // role reveal
-  s7:'lobby.png',s8:'lobby.png',
   'sd':'lobby.png','sv':'lobby.png',
   'stask':'lobby.png',s9:'Homescreen.png',
 };
+// s7 (player) and s8 (RAI) keep whatever room background was set by setRoomBackground — never overridden here
+const NO_BG_OVERRIDE=new Set(['s7','s8']);
 const BG_DARK={s7:true,s8:true,sd:true,sv:true,stask:true};
 function go(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  // swap background
   const key=id.replace('s-','s').replace('-','');
   const img=document.getElementById('bg-img');
   const ov=document.getElementById('main-ov');
-  if(img){
+  if(img&&!NO_BG_OVERRIDE.has(id)){
     const src=BG_MAP[key]||BG_MAP[id]||'Homescreen.png';
     if(img.src.split('/').pop()!==src)img.src=src;
   }
-  // darken overlay more for game screens
   if(ov)ov.style.background=BG_DARK[key]?'rgba(4,2,18,0.82)':'rgba(8,8,24,0.68)';
 }
 function setBtn(id,l,t){const b=document.getElementById(id);if(!b)return;b.disabled=l;b.innerHTML=l?`<span class="sp"></span>${t}`:t;}
@@ -657,7 +701,7 @@ function showRoleReveal(){
   if(S.role==='rai'){document.getElementById('role-ico').textContent='😈';document.getElementById('role-title').textContent='You are RAI';document.getElementById('role-sub').textContent='Secretly sabotage the team. You cannot die.';document.getElementById('role-btn').style.background='linear-gradient(135deg,#ef4444,#b91c1c)';}
   else{document.getElementById('role-ico').textContent='🎮';document.getElementById('role-title').textContent='You are a Player';document.getElementById('role-sub').textContent='Work with your team to escape. One among you is RAI. Trust no one.';}
   go('s-role');}
-function enterGameAfterReveal(){S.lastPhase=null;S.lastPosKey=null;S.lastPos=null;S.myVote=null;startPoll(S.gameId);}
+function enterGameAfterReveal(){S.lastPhase=null;S.lastPosKey=null;S.lastPos=null;S.myVote=null;preloadAllRoomBgs();startPoll(S.gameId);}
 
 // ══ HOST: ROOM EFFECT ════════════════════════════════════════
 async function hostApplyEffect(pos,players,g){
@@ -724,6 +768,7 @@ function stopDistTimer(){if(S.distTimer){clearInterval(S.distTimer);S.distTimer=
 // ══ ENTER ROOM VIEW ══════════════════════════════════════════
 function enterRoomView(pos,votes,g){
   const[r,c]=pos;const cell=S.mapData.grid[r][c];
+  setRoomBackground(cell);
   if(cell==='T'){
     go('s-task');let cd=2;document.getElementById('task-countdown').textContent=cd;
     const ti=setInterval(()=>{cd--;document.getElementById('task-countdown').textContent=cd;if(cd<=0)clearInterval(ti);},1000);
