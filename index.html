@@ -191,7 +191,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v18 — uncapped image discovery (1,2,3...)</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v19 — first room defaults to image 1, then shuffles</div>
 </div>
 
 <!-- S2 -->
@@ -457,6 +457,7 @@ async function preloadAllRoomBgs(){
   for(const folder of new Set(Object.values(ROOM_FOLDER)))await discoverFolder(folder);
 }
 function getRoomFolder(cell){return ROOM_FOLDER[cell]||'neutral';}
+let _firstRoomBgShown=false;
 async function setRoomBackground(cell){
   const folder=getRoomFolder(cell);
   let imgs=ROOM_IMG_CACHE[folder];
@@ -465,11 +466,24 @@ async function setRoomBackground(cell){
   const img=document.getElementById('bg-img');
   if(!img)return;
   if(imgs&&imgs.length){
-    const pick=imgs[Math.floor(Math.random()*imgs.length)];
+    let pick;
+    if(!_firstRoomBgShown){
+      // first room of the session: always use image 1 of this category if present,
+      // otherwise fall back to neutral's image 1, otherwise just pick randomly
+      _firstRoomBgShown=true;
+      const first=imgs.find(p=>p.endsWith('/1.png'));
+      if(first){pick=first;}
+      else{
+        const neutralImgs=ROOM_IMG_CACHE['neutral']||await discoverFolder('neutral');
+        const neutralFirst=neutralImgs.find(p=>p.endsWith('/1.png'));
+        pick=neutralFirst||imgs[Math.floor(Math.random()*imgs.length)];
+      }
+    }else{
+      pick=imgs[Math.floor(Math.random()*imgs.length)];
+    }
     img.src=pick;
     img.style.display='block';
   }else{
-    // no images anywhere — fall back to plain background colour
     img.style.display='none';
   }
 }
@@ -750,7 +764,7 @@ function showRoleReveal(){
   if(S.role==='rai'){document.getElementById('role-ico').textContent='😈';document.getElementById('role-title').textContent='You are RAI';document.getElementById('role-sub').textContent='Secretly sabotage the team. You cannot die.';document.getElementById('role-btn').style.background='linear-gradient(135deg,#ef4444,#b91c1c)';}
   else{document.getElementById('role-ico').textContent='🎮';document.getElementById('role-title').textContent='You are a Player';document.getElementById('role-sub').textContent='Work with your team to escape. One among you is RAI. Trust no one.';}
   go('s-role');}
-function enterGameAfterReveal(){S.lastPhase=null;S.lastPosKey=null;S.lastPos=null;S.myVote=null;preloadAllRoomBgs();startPoll(S.gameId);}
+function enterGameAfterReveal(){S.lastPhase=null;S.lastPosKey=null;S.lastPos=null;S.myVote=null;_firstRoomBgShown=false;preloadAllRoomBgs();startPoll(S.gameId);}
 
 // ══ HOST: ROOM EFFECT ════════════════════════════════════════
 async function hostApplyEffect(pos,players,g){
