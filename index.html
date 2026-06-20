@@ -81,7 +81,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 #s-role{flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.85)}
 .rcard{padding:32px 40px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
 /* PLAYER GAME */
-#s7{flex-direction:column;padding:12px 16px;gap:8px;background:rgba(5,0,20,.75)}
+#s7{flex-direction:column;padding:12px 16px;gap:8px}
 .ghdr{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .room-title{font-size:14px;font-weight:900;color:#fff;flex-shrink:0}
 .timer-ring{position:relative;width:44px;height:44px;flex-shrink:0}
@@ -135,7 +135,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 .rv-votes{font-size:12px;color:rgba(255,255,255,.7);font-weight:600}
 .rv-crown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:16px}
 /* RAI VIEW */
-#s8{flex-direction:column;padding:10px 14px;gap:8px;background:rgba(5,0,15,.85)}
+#s8{flex-direction:column;padding:10px 14px;gap:8px}
 .rh{display:flex;align-items:center;gap:8px;margin-bottom:2px}
 .rbig{background:#ef4444;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:900;color:#fff;flex-shrink:0}
 .rtabs{display:flex;gap:6px;margin-left:auto}
@@ -191,7 +191,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v19 — first room defaults to image 1, then shuffles</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v20 — fixed double-dark-overlay hiding room backgrounds</div>
 </div>
 
 <!-- S2 -->
@@ -534,7 +534,7 @@ function go(id){
     const src=BG_MAP[key]||BG_MAP[id]||'Homescreen.png';
     if(img.src.split('/').pop()!==src)img.src=src;
   }
-  if(ov)ov.style.background=BG_DARK[key]?'rgba(4,2,18,0.82)':'rgba(8,8,24,0.68)';
+  if(ov)ov.style.background=BG_DARK[key]?'rgba(4,2,18,0.45)':'rgba(8,8,24,0.68)';
 }
 function setBtn(id,l,t){const b=document.getElementById(id);if(!b)return;b.disabled=l;b.innerHTML=l?`<span class="sp"></span>${t}`:t;}
 function randCode(){return Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');}
