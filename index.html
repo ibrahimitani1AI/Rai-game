@@ -191,7 +191,7 @@ body{background:#111;display:flex;align-items:center;justify-content:center;min-
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v17 — taunt fixes: self-taunt, delay, real cooldown lock</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v18 — uncapped image discovery (1,2,3...)</div>
 </div>
 
 <!-- S2 -->
@@ -427,10 +427,11 @@ const RNAMES={S:'Start',E:'Exit',T:'Task Room',N:'Neutral',H:'Healing',P:'Poison
 const RCOL={S:'#0ea5e9',E:'#6366f1',T:'#eab308',N:'#374151',H:'#22c55e',P:'#ef4444',D:'#a855f7',J:'#3b82f6',M:'#db2777'};
 
 // ══ ROOM BACKGROUNDS ═════════════════════════════════════════
-// Maps room cell type → folder name. S/E/J have no folder, default to neutral.
+// Maps room cell type → folder name. S has no folder, defaults to neutral.
 const ROOM_FOLDER={H:'healing',P:'poison',D:'damage',M:'murder',N:'neutral',T:'task',E:'exit',J:'jump'};
 const ROOM_IMG_CACHE={}; // folder -> array of working image paths
-const MAX_TRY=12; // try N.png for N up to this number per folder
+const MAX_MISSES_IN_A_ROW=3; // stop scanning a folder after this many consecutive misses
+const HARD_CAP=200; // absolute safety ceiling so a typo can't loop forever
 
 function loadImg(src){
   return new Promise(res=>{
@@ -443,9 +444,11 @@ function loadImg(src){
 async function discoverFolder(folder){
   if(ROOM_IMG_CACHE[folder])return ROOM_IMG_CACHE[folder];
   const found=[];
-  for(let i=1;i<=MAX_TRY;i++){
+  let misses=0;
+  for(let i=1;i<=HARD_CAP&&misses<MAX_MISSES_IN_A_ROW;i++){
     const path=`rooms/${folder}/${i}.png`;
-    if(await loadImg(path))found.push(path);
+    if(await loadImg(path)){found.push(path);misses=0;}
+    else misses++;
   }
   ROOM_IMG_CACHE[folder]=found;
   return found;
