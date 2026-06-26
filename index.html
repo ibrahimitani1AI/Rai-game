@@ -208,7 +208,7 @@ body{display:flex;align-items:center;justify-content:center}
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v22 — landscape fill + scale on mobile</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v23 — leader mechanic + flash mini-game wired</div>
 </div>
 
 <!-- S2 -->
@@ -238,7 +238,7 @@ body{display:flex;align-items:center;justify-content:center}
       <div class="srow"><span class="slbl">Poison dmg</span><div class="stpr"><button onclick="adj('dp',-1)">−</button><span id="dp-v">10</span><button onclick="adj('dp',1)">+</button></div></div>
       <div class="srow"><span class="slbl">Trap dmg</span><div class="stpr"><button onclick="adj('dd',-5)">−</button><span id="dd-v">20</span><button onclick="adj('dd',5)">+</button></div></div>
       <div class="srow"><span class="slbl">Healing</span><div class="stpr"><button onclick="adj('dh',-5)">−</button><span id="dh-v">10</span><button onclick="adj('dh',5)">+</button></div></div>
-      <div class="srow"><span class="slbl">Vote timer (s)</span><div class="stpr"><button onclick="adj('vt',-30)">−</button><span id="vt-v">60</span><button onclick="adj('vt',30)">+</button></div></div>
+      <div class="srow"><span class="slbl">Vote timer (s)</span><div class="stpr"><button onclick="adj('vt',-30)">−</button><span id="vt-v">40</span><button onclick="adj('vt',30)">+</button></div></div>
       <div class="srow" style="border:none"><span class="slbl">Distraction (s)</span><div class="stpr"><button onclick="adj('dt',-5)">−</button><span id="dt-v">10</span><button onclick="adj('dt',5)">+</button></div></div>
     </div>
     <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em;margin:6px 0 2px">RAI Abilities</div>
@@ -426,6 +426,47 @@ body{display:flex;align-items:center;justify-content:center}
 <!-- IN-GAME TOAST (replaces native alert for ability feedback) -->
 <div id="game-toast" style="display:none;position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(20,10,30,.95);border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:10px 18px;font-size:12px;font-weight:700;color:#fca5a5;text-align:center;max-width:80%;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
 
+<!-- LEADER ANNOUNCEMENT (all screens, 2s) -->
+<div class="screen" id="s-leader-announce">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+    <div style="font-size:11px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.08em">This round's leader</div>
+    <div style="font-size:36px" id="la-avatar">🦊</div>
+    <div style="font-size:26px;font-weight:900;color:#fff" id="la-name">Player</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.5)" id="la-sub">is reading the room…</div>
+  </div>
+</div>
+
+<!-- LEADER FLASH SCREEN (leader only) -->
+<div class="screen" id="s-leader-flash">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;padding:12px 20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+      <div style="font-size:11px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.06em">You are the Leader</div>
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em" id="lf-timer-lbl">5s</div>
+    </div>
+    <div style="font-size:15px;font-weight:900;color:#fff" id="lf-challenge-label">Focus</div>
+    <div class="lf-grid-wrap" style="position:relative">
+      <div id="lf-grid" style="display:grid;gap:4px"></div>
+    </div>
+    <!-- hint shown after flash -->
+    <div id="lf-hint" style="display:none;flex-direction:column;align-items:center;gap:6px;text-align:center">
+      <div style="font-size:10px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.08em">The correct door…</div>
+      <div style="font-size:16px;font-weight:900;color:#fff;line-height:1.4" id="lf-hint-text"></div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4)" id="lf-hint-timer">Voting opens in 5s…</div>
+    </div>
+  </div>
+</div>
+
+<!-- LEADER WAIT SCREEN (non-leaders during flash + hint) -->
+<div class="screen" id="s-leader-wait">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em">Leader is reading the room</div>
+    <div style="font-size:28px;font-weight:900;color:#fff" id="lw-name">Player</div>
+    <div style="font-size:44px;font-weight:900;color:var(--pink)" id="lw-countdown">10</div>
+    <div class="dot-row"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div style="font-size:12px;color:rgba(255,255,255,.4)">Get ready to discuss and vote</div>
+  </div>
+</div>
+
 <!-- S9 GAME OVER -->
 <div class="screen" id="s9">
   <div class="gi" id="go-ico">🎉</div>
@@ -523,7 +564,7 @@ const REFF={H:'💚 Healing — everyone gains HP',P:'☠ Poison — everyone lo
 const SAFE=new Set(['S','E','T','N','H']);
 
 // ══ SETTINGS ═════════════════════════════════════════════════
-const SET={ns:4,shp:100,dp:10,dd:20,dh:10,vt:60,dt:10,atk:30,cdl:10,cda:8,cdv:5,cdg:3,cdc:3,cds:3};
+const SET={ns:4,shp:100,dp:10,dd:20,dh:10,vt:40,dt:10,atk:30,cdl:10,cda:8,cdv:5,cdg:3,cdc:3,cds:3};
 const SLIM={ns:[2,6],shp:[50,100],dp:[1,50],dd:[5,50],dh:[5,50],vt:[30,300],dt:[5,30],atk:[5,100],cdl:[1,30],cda:[1,30],cdv:[1,30],cdg:[1,20],cdc:[1,20],cds:[1,20]};
 function adj(k,d){SET[k]=Math.min(SLIM[k][1],Math.max(SLIM[k][0],SET[k]+({shp:10,dd:5,dh:5,vt:30,dt:5,atk:5}[k]||1)*Math.sign(d)));document.getElementById(k+'-v').textContent=SET[k];}
 
@@ -534,7 +575,7 @@ let S={
   gameId:null,gameCode:null,playerId:null,isHost:false,role:null,
   pollTimer:null,voteTimer:null,distTimer:null,
   mapData:null,players:[],myVote:null,gameSettings:null,
-  lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,
+  lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,lastLeaderPhase:null,leaderFlashData:null,
 };
 
 // ══ REST ═════════════════════════════════════════════════════
@@ -746,7 +787,7 @@ async function doPoll(gId){
       const prevPhase=S.lastPhase;const prevPosKey=S.lastPosKey;
       S.lastPhase=phase;S.lastPosKey=posKey;
       if(phase==='voting'&&(prevPhase!=='voting'||posKey!==prevPosKey)){
-        S.myVote=null;
+        S.myVote=null;S.lastLeaderPhase=null;
         // taunt check
         if(S.lastPos&&prevPosKey){
           const vis=g.visited||{};const timesHere=vis[posKey]||0;
@@ -757,8 +798,21 @@ async function doPoll(gId){
         }
         S.lastPos=[...pos];
         if(S.isHost)hostApplyEffect(pos,players,g);
-        enterRoomView(pos,votes,g);
-        startVoteTimer(g);
+        // Don't enter room view yet — wait for leader_phase
+        // enterRoomView called when leader_phase becomes 'done'
+      }else if(phase==='voting'&&posKey===prevPosKey&&g.leader_phase!==S.lastLeaderPhase){
+        // Same room, leader phase changed
+        const lp=g.leader_phase;S.lastLeaderPhase=lp;
+        if(lp==='flash'){
+          showLeaderAnnounce(g,players,()=>{
+            const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
+            if(g.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
+            else{startLeaderWait(g,players);}
+          });
+        }else if(lp==='done'){
+          enterRoomView(pos,votes,g);
+          startVoteTimer(g);
+        }
       }else if(phase==='distraction'&&prevPhase!=='distraction'){
         stopVoteTimer();startDistractionView(g);
       }else if(phase==='reveal'&&prevPhase!=='reveal'){
@@ -781,6 +835,11 @@ async function doPoll(gId){
       // HOST: win check from DB
       if(S.isHost){const ac=players.filter(p=>p.alive).length;if(ac<=2&&players.length>=3)
         dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'rai'}).catch(()=>{});}
+    }
+    // HOST: leader phase safety net — force 'done' after 11s if leader's client didn't
+    if(phase==='voting'&&S.isHost&&g.leader_phase==='flash'&&g.leader_phase_started_at){
+      const elapsed=(Date.now()-new Date(g.leader_phase_started_at).getTime())/1000;
+      if(elapsed>=11)dbPatch('games',{id:`eq.${S.gameId}`},{leader_phase:'done'}).catch(()=>{});
     }
     if(phase==='distraction'&&S.isHost&&g.phase_started_at){
       const el=(Date.now()-new Date(g.phase_started_at).getTime())/1000;
@@ -824,7 +883,10 @@ async function hostApplyEffect(pos,players,g){
   if(changed){
     for(const p of lp){const o=players.find(x=>x.id===p.id);if(o&&(o.hp!==p.hp||o.alive!==p.alive))await dbPatch('players',{id:`eq.${p.id}`},{hp:p.hp,alive:p.alive}).catch(()=>{});}
     S.players=lp;
-    if(lp.filter(p=>p.alive).length<=2)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'rai'}).catch(()=>{});}}
+    if(lp.filter(p=>p.alive).length<=2)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'rai'}).catch(()=>{});}
+  // Pick leader after effect — use updated player list
+  await hostPickLeader(S.players.length?S.players:players,g);
+}
 
 // ══ HOST: TASK AUTO-ADVANCE ══════════════════════════════════
 async function hostHandleTask(pos,g){
@@ -1154,6 +1216,147 @@ async function refreshPowersPanel(){
   });
 }
 
+// ══ LEADER FLASH MINI-GAME ═══════════════════════════════════
+const FLASH_BG=[{name:'yellow',hex:'#eab308'},{name:'green',hex:'#22c55e'},{name:'blue',hex:'#3b82f6'},{name:'red',hex:'#ef4444'}];
+const FLASH_TXT=[{name:'black',hex:'#111111'},{name:'white',hex:'#ffffff'}];
+const FLASH_ROWS=3,FLASH_COLS=3;
+function frnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function frndInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+function generateFlash(dc){
+  const total=FLASH_ROWS*FLASH_COLS;
+  const MAX=30;
+  for(let attempt=0;attempt<MAX;attempt++){
+    const hintType=frnd(['combo','position','count']);
+    const correctDoor=frndInt(1,dc);
+    const correctBg=frnd(FLASH_BG);const correctTxt=frnd(FLASH_TXT);
+    const correctIdx=frndInt(0,total-1);
+    const correctRow=Math.floor(correctIdx/FLASH_COLS);
+    const correctCol=correctIdx%FLASH_COLS;
+    const allNums=[...Array.from({length:dc},(_,i)=>i+1),5,6].slice(0,Math.max(dc+2,5));
+    const cells=Array.from({length:total},(_,i)=>({
+      num:i===correctIdx?correctDoor:frnd(allNums),
+      bg:i===correctIdx?correctBg:frnd(FLASH_BG),
+      txt:i===correctIdx?correctTxt:frnd(FLASH_TXT),
+    }));
+    if(hintType==='combo'){
+      if(cells.some((c,i)=>i!==correctIdx&&c.bg.name===correctBg.name&&c.txt.name===correctTxt.name))continue;
+    }
+    const actualCount=cells.filter(c=>c.num===correctDoor).length;
+    if(hintType==='count'){
+      const others=[...new Set(cells.filter(c=>c.num!==correctDoor).map(c=>c.num))];
+      if(others.some(n=>cells.filter(c=>c.num===n).length===actualCount))continue;
+    }
+    const ROW_NAMES=['top','middle','bottom'];
+    const COL_NAMES=['left','middle','right'];
+    let hintText='';
+    if(hintType==='combo')hintText=`had a ${correctBg.name} background with a ${correctTxt.name} number`;
+    else if(hintType==='position')hintText=`was in the ${ROW_NAMES[correctRow]} row, ${COL_NAMES[correctCol]} column`;
+    else if(hintType==='count')hintText=`appeared exactly ${actualCount} time${actualCount>1?'s':''} in the grid`;
+    const LABELS={combo:'🎨 Remember the Color',position:'📍 Remember the Position',count:'🔢 Count the Occurrences'};
+    return{cells,correctIdx,correctDoor,hintText,hintType,label:LABELS[hintType]};
+  }
+  // fallback - position always works
+  const correctDoor=frndInt(1,dc);const correctIdx=frndInt(0,total-1);
+  const correctRow=Math.floor(correctIdx/FLASH_COLS);const correctCol=correctIdx%FLASH_COLS;
+  const allNums=[...Array.from({length:dc},(_,i)=>i+1),5,6].slice(0,5);
+  const cells=Array.from({length:total},(_,i)=>({num:i===correctIdx?correctDoor:frnd(allNums),bg:frnd(FLASH_BG),txt:frnd(FLASH_TXT)}));
+  const ROW_NAMES=['top','middle','bottom'];const COL_NAMES=['left','middle','right'];
+  return{cells,correctIdx,correctDoor,hintText:`was in the ${ROW_NAMES[correctRow]} row, ${COL_NAMES[correctCol]} column`,hintType:'position',label:'📍 Remember the Position'};
+}
+
+function renderFlashGrid(cells,hintType){
+  const grid=document.getElementById('lf-grid');
+  grid.style.gridTemplateColumns=`repeat(${FLASH_COLS},72px)`;
+  grid.innerHTML='';
+  cells.forEach((c,i)=>{
+    const div=document.createElement('div');
+    div.style.cssText=`width:72px;height:72px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;font-family:'Nunito',sans-serif;border:2px solid transparent`;
+    if(hintType==='combo'){div.style.background=c.bg.hex;div.style.color=c.txt.hex;}
+    else{div.style.background='rgba(255,255,255,0.1)';div.style.color='#fff';div.style.border='2px solid rgba(255,255,255,0.15)';}
+    div.textContent=c.num;grid.appendChild(div);
+  });
+}
+
+// ══ LEADER FLOW ══════════════════════════════════════════════
+// Host picks leader and writes to DB after effect fires
+async function hostPickLeader(players,g){
+  const alive=players.filter(p=>p.alive);
+  if(!alive.length)return;
+  const lastId=g.last_leader_id;
+  const candidates=alive.length>1?alive.filter(p=>p.id!==lastId):alive;
+  const leader=candidates[Math.floor(Math.random()*candidates.length)];
+  await dbPatch('games',{id:`eq.${S.gameId}`},{
+    current_leader_id:leader.id,
+    last_leader_id:leader.id,
+    leader_phase:'flash',
+    leader_phase_started_at:new Date().toISOString()
+  }).catch(()=>{});
+}
+
+// Show leader announcement (2s) then transition
+function showLeaderAnnounce(g,players,then){
+  const leader=players.find(p=>p.id===g.current_leader_id);
+  if(!leader){then();return;}
+  document.getElementById('la-avatar').textContent=leader.avatar;
+  document.getElementById('la-name').textContent=leader.name;
+  document.getElementById('la-sub').textContent=
+    leader.id===S.playerId?'That\'s you! Get ready to focus.':'is reading the room…';
+  go('s-leader-announce');
+  setTimeout(()=>then(),2000);
+}
+
+// Leader sees the flash mini-game
+function startLeaderFlash(g,dc){
+  const flashData=generateFlash(dc||4);
+  S.leaderFlashData=flashData;
+  document.getElementById('lf-challenge-label').textContent=flashData.label;
+  document.getElementById('lf-hint').style.display='none';
+  renderFlashGrid(flashData.cells,flashData.hintType);
+  go('s-leader-flash');
+
+  // 5s flash phase
+  let secs=5;
+  document.getElementById('lf-timer-lbl').textContent=`${secs}s`;
+  const flashTick=setInterval(()=>{
+    secs--;document.getElementById('lf-timer-lbl').textContent=`${secs}s`;
+    if(secs<=0){
+      clearInterval(flashTick);
+      // blur grid, show hint
+      document.getElementById('lf-grid').style.filter='blur(8px)';
+      const hintEl=document.getElementById('lf-hint');
+      document.getElementById('lf-hint-text').textContent=`The correct door ${flashData.hintText}`;
+      hintEl.style.display='flex';
+      // 5s hint phase countdown
+      let hsecs=5;
+      document.getElementById('lf-hint-timer').textContent=`Voting opens in ${hsecs}s…`;
+      const hintTick=setInterval(()=>{
+        hsecs--;document.getElementById('lf-hint-timer').textContent=`Voting opens in ${hsecs}s…`;
+        if(hsecs<=0){
+          clearInterval(hintTick);
+          // Host writes leader_phase:'done' to open voting
+          if(S.isHost||S.role==='rai'){
+            dbPatch('games',{id:`eq.${S.gameId}`},{leader_phase:'done'}).catch(()=>{});
+          }
+        }
+      },1000);
+    }
+  },1000);
+}
+
+// Non-leaders wait
+function startLeaderWait(g,players){
+  const leader=players.find(p=>p.id===g.current_leader_id);
+  document.getElementById('lw-name').textContent=leader?leader.name:'Leader';
+  go('s-leader-wait');
+  let secs=10;
+  document.getElementById('lw-countdown').textContent=secs;
+  const tick=setInterval(()=>{
+    secs--;document.getElementById('lw-countdown').textContent=Math.max(0,secs);
+    if(secs<=0)clearInterval(tick);
+  },1000);
+}
+
 function confirmLeave(){
   const inGame=['s7','s8','s-role','s-task','s-dist','s-reveal'].some(id=>document.getElementById(id)?.classList.contains('active'));
   const msg=S.isHost?(inGame?'Leaving will END the game for everyone. Sure?':'Leave lobby?'):(inGame?'Leave the game?':'Leave lobby?');
@@ -1162,7 +1365,7 @@ async function leaveGame(){
   stopPoll();stopVoteTimer();stopDistTimer();
   if(S.gameId&&S.isHost)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'abandoned'}).catch(()=>{});
   if(S.playerId)await dbDelete('players',{id:`eq.${S.playerId}`}).catch(()=>{});
-  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,_moving:false};
+  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,lastLeaderPhase:null,leaderFlashData:null,_moving:false};
   go('s2');}
 
 // ══ ABANDON ON CLOSE/REFRESH (best-effort, host only) ════════
