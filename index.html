@@ -208,7 +208,7 @@ body{display:flex;align-items:center;justify-content:center}
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v28 — leader reset on room move, round 2+ leader flash fixed</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v29 — flags pre-set before poll, no double leader trigger</div>
 </div>
 
 <!-- S2 -->
@@ -863,7 +863,7 @@ async function doPoll(gId){
 async function assignRole(){try{const me=await dbGet('players',{id:`eq.${S.playerId}`});S.role=me[0]?.role||'player';}catch(e){}}
 
 function showRoleReveal(){
-  // Role content
+  const g=S.gameSettings;
   if(S.role==='rai'){
     document.getElementById('role-ico').textContent='😈';
     document.getElementById('role-title').textContent='You are RAI';
@@ -875,8 +875,6 @@ function showRoleReveal(){
     document.getElementById('role-title').style.color='#fff';
     document.getElementById('role-sub').textContent='Work with your team to escape. One among you is RAI. Trust no one.';
   }
-  // Leader content — read from gameSettings
-  const g=S.gameSettings;
   const leader=S.players.find(p=>p.id===g?.current_leader_id);
   if(leader){
     document.getElementById('role-leader-avatar').textContent=leader.avatar;
@@ -887,30 +885,28 @@ function showRoleReveal(){
   go('s-role');
   _firstRoomBgShown=false;
   preloadAllRoomBgs();
-  // Auto-dismiss after 2s then start leader flow
+  // Pre-set ALL state flags before poll starts so poll never double-triggers leader flow
+  const startPos=Array.isArray(g?.current_pos)?g.current_pos:S.mapData.start;
+  S.lastPhase='voting';
+  S.lastPosKey=`${startPos[0]},${startPos[1]}`;
+  S.lastPos=[...startPos];
+  S.lastLeaderPhase='flash';
+  S._leaderAnnounced=true;
+  S.myVote=null;
+  // 2s countdown then start leader flow, THEN start poll
   let cd=2;document.getElementById('role-countdown').textContent=cd;
   const tick=setInterval(()=>{
     cd--;document.getElementById('role-countdown').textContent=Math.max(0,cd);
     if(cd<=0){
       clearInterval(tick);
+      const posKey=S.lastPosKey;
+      const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
+      if(g?.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
+      else{startLeaderWait(g,S.players);}
       startPoll(S.gameId);
-      // Immediately trigger leader flow from current game state
-      if(g&&g.current_leader_id){
-        const posKey=`${(g.current_pos||S.mapData.start)[0]},${(g.current_pos||S.mapData.start)[1]}`;
-        const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
-        S.lastLeaderPhase='flash';
-        S._leaderAnnounced=true;
-        if(g.current_leader_id===S.playerId){
-          startLeaderFlash(g,dc);
-        }else{
-          startLeaderWait(g,S.players);
-        }
-      }
     }
   },1000);
 }
-
-// enterGameAfterReveal no longer needed — kept for safety
 function enterGameAfterReveal(){startPoll(S.gameId);}
 
 // ══ HOST: ROOM EFFECT ════════════════════════════════════════
