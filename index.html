@@ -208,7 +208,7 @@ body{display:flex;align-items:center;justify-content:center}
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v23 — leader mechanic + flash mini-game wired</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v24 — leader flow fixed, first room leader set at game start</div>
 </div>
 
 <!-- S2 -->
@@ -743,10 +743,12 @@ async function startGame(){
     const gs=await dbGet('games',{id:`eq.${S.gameId}`});const g=gs[0];
     const players=await dbGet('players',{game_id:`eq.${S.gameId}`,order:'joined_at.asc'});
     const map=genMap(g.ns,{n:g.mix_n,h:g.mix_h,p:g.mix_p,d:g.mix_d},Math.floor(Math.random()*999999),players.length);
+    const sv={};sv[`${map.start[0]},${map.start[1]}`]=1;
+    // assign roles then pick first leader immediately
     const raiIdx=Math.floor(Math.random()*players.length);
     for(const p of players)await dbPatch('players',{id:`eq.${p.id}`},{role:p.id===players[raiIdx].id?'rai':'player'});
-    const sv={};sv[`${map.start[0]},${map.start[1]}`]=1;
-    await dbPatch('games',{id:`eq.${S.gameId}`},{status:'active',grid:map,current_pos:map.start,visited:sv,step:0,phase:'voting',current_votes:{},phase_started_at:new Date().toISOString()});
+    const firstLeader=players[Math.floor(Math.random()*players.length)];
+    await dbPatch('games',{id:`eq.${S.gameId}`},{status:'active',grid:map,current_pos:map.start,visited:sv,step:0,phase:'voting',current_votes:{},phase_started_at:new Date().toISOString(),current_leader_id:firstLeader.id,last_leader_id:firstLeader.id,leader_phase:'flash',leader_phase_started_at:new Date().toISOString()});
   }catch(e){alert('Error: '+e.message);setBtn('start-btn',false,'Start Game →');}
 }
 function renderLobbyP(players,elId){
@@ -797,11 +799,22 @@ async function doPoll(gId){
           }
         }
         S.lastPos=[...pos];
-        if(S.isHost)hostApplyEffect(pos,players,g);
-        // Don't enter room view yet — wait for leader_phase
-        // enterRoomView called when leader_phase becomes 'done'
+        if(S.isHost)await hostApplyEffect(pos,players,g);
+        // after effect, leader_phase should now be 'flash' in DB
+        // poll will pick it up next tick — but also handle if already set
+        if(g.leader_phase==='flash'||g.leader_phase==='done'){
+          const lp=g.leader_phase;S.lastLeaderPhase=lp;
+          if(lp==='flash'){
+            showLeaderAnnounce(g,players,()=>{
+              const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
+              if(g.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
+              else{startLeaderWait(g,players);}
+            });
+          }else{enterRoomView(pos,votes,g);startVoteTimer(g);}
+        }
+        // if leader_phase not yet written (async lag), poll will catch it next tick
       }else if(phase==='voting'&&posKey===prevPosKey&&g.leader_phase!==S.lastLeaderPhase){
-        // Same room, leader phase changed
+        // leader phase changed within same room
         const lp=g.leader_phase;S.lastLeaderPhase=lp;
         if(lp==='flash'){
           showLeaderAnnounce(g,players,()=>{
