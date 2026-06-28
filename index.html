@@ -208,7 +208,7 @@ body{display:flex;align-items:center;justify-content:center}
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v25 — leader flash transitions to vote correctly</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v26 — combined role+leader reveal, auto-dismiss, clean sequence</div>
 </div>
 
 <!-- S2 -->
@@ -297,14 +297,21 @@ body{display:flex;align-items:center;justify-content:center}
   <div class="wr2"><div class="wpanel glass"><div class="wlbl">Players in lobby</div><div id="w-players"></div></div></div>
 </div>
 
-<!-- ROLE REVEAL -->
+<!-- ROLE + LEADER REVEAL (first room only, auto-dismisses 2s) -->
 <div class="screen" id="s-role">
-  <div class="rcard glass">
-    <div style="font-size:56px" id="role-ico">🎮</div>
-    <div style="font-size:22px;font-weight:900;color:#fff" id="role-title">You are a Player</div>
-    <div style="font-size:13px;color:rgba(255,255,255,.65);max-width:280px;line-height:1.5;text-align:center" id="role-sub">Work with your team to reach the Exit.</div>
-    <button class="btn-g" id="role-btn" onclick="enterGameAfterReveal()" style="font-size:14px;padding:12px 28px;margin-top:4px">Got it →</button>
-    <button onclick="confirmLeave()" style="background:none;border:none;color:rgba(255,255,255,.3);font-family:'Nunito',sans-serif;font-size:11px;cursor:pointer">Leave game</button>
+  <div class="rcard glass" style="gap:10px">
+    <div style="font-size:48px" id="role-ico">🎮</div>
+    <div style="font-size:20px;font-weight:900;color:#fff" id="role-title">You are a Player</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.55);max-width:260px;line-height:1.5;text-align:center" id="role-sub">Work with your team to reach the Exit.</div>
+    <div style="width:100%;height:1px;background:rgba(255,255,255,.12);margin:4px 0"></div>
+    <div style="font-size:10px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.08em">This round's leader</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:24px" id="role-leader-avatar">🦊</div>
+      <div style="font-size:18px;font-weight:900;color:#fff" id="role-leader-name">—</div>
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,.35)" id="role-leader-sub">is reading the room first</div>
+    <div style="font-size:28px;font-weight:900;color:var(--pink);margin-top:4px" id="role-countdown">2</div>
+    <button onclick="confirmLeave()" style="background:none;border:none;color:rgba(255,255,255,.25);font-family:'Nunito',sans-serif;font-size:11px;cursor:pointer;margin-top:2px">Leave game</button>
   </div>
 </div>
 
@@ -575,7 +582,7 @@ let S={
   gameId:null,gameCode:null,playerId:null,isHost:false,role:null,
   pollTimer:null,voteTimer:null,distTimer:null,
   mapData:null,players:[],myVote:null,gameSettings:null,
-  lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,lastLeaderPhase:null,leaderFlashData:null,
+  lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,lastLeaderPhase:null,leaderFlashData:null,_leaderAnnounced:false,
 };
 
 // ══ REST ═════════════════════════════════════════════════════
@@ -789,7 +796,7 @@ async function doPoll(gId){
       const prevPhase=S.lastPhase;const prevPosKey=S.lastPosKey;
       S.lastPhase=phase;S.lastPosKey=posKey;
       if(phase==='voting'&&(prevPhase!=='voting'||posKey!==prevPosKey)){
-        S.myVote=null;S.lastLeaderPhase=null;
+        S.myVote=null;S.lastLeaderPhase=null;S._leaderAnnounced=false;
         // taunt check
         if(S.lastPos&&prevPosKey){
           const vis=g.visited||{};const timesHere=vis[posKey]||0;
@@ -800,9 +807,11 @@ async function doPoll(gId){
         }
         S.lastPos=[...pos];
         if(S.isHost)await hostApplyEffect(pos,players,g);
-        // after effect, leader_phase should now be 'flash' in DB
-        // poll will pick it up next tick — but also handle if already set
-        if(g.leader_phase==='flash'||g.leader_phase==='done'){
+        // Re-read g after host effect (leader may now be set)
+        // For non-first rooms: show leader announce then flash/wait
+        // For first room: handled by showRoleReveal auto-dismiss
+        const isFirstRoom=!prevPosKey;
+        if(!isFirstRoom&&(g.leader_phase==='flash'||g.leader_phase==='done')){
           const lp=g.leader_phase;S.lastLeaderPhase=lp;
           if(lp==='flash'){
             showLeaderAnnounce(g,players,()=>{
@@ -812,7 +821,7 @@ async function doPoll(gId){
             });
           }else{enterRoomView(pos,votes,g);startVoteTimer(g);}
         }
-        // if leader_phase not yet written (async lag), poll will catch it next tick
+        // if leader_phase not yet written, poll catches it next tick via else-if below
       }else if(phase==='voting'&&posKey===prevPosKey&&g.leader_phase!==S.lastLeaderPhase){
         // leader phase changed within same room
         const lp=g.leader_phase;S.lastLeaderPhase=lp;
@@ -862,13 +871,59 @@ async function doPoll(gId){
       if(el>=2)hostMoveToNextRoom(g,votes);}
   }catch(e){/*retry*/}}
 
-// ══ ROLE ═════════════════════════════════════════════════════
+// ══ ROLE + LEADER REVEAL ═════════════════════════════════════
 async function assignRole(){try{const me=await dbGet('players',{id:`eq.${S.playerId}`});S.role=me[0]?.role||'player';}catch(e){}}
+
 function showRoleReveal(){
-  if(S.role==='rai'){document.getElementById('role-ico').textContent='😈';document.getElementById('role-title').textContent='You are RAI';document.getElementById('role-sub').textContent='Secretly sabotage the team. You cannot die.';document.getElementById('role-btn').style.background='linear-gradient(135deg,#ef4444,#b91c1c)';}
-  else{document.getElementById('role-ico').textContent='🎮';document.getElementById('role-title').textContent='You are a Player';document.getElementById('role-sub').textContent='Work with your team to escape. One among you is RAI. Trust no one.';}
-  go('s-role');}
-function enterGameAfterReveal(){S.lastPhase=null;S.lastPosKey=null;S.lastPos=null;S.myVote=null;_firstRoomBgShown=false;preloadAllRoomBgs();startPoll(S.gameId);}
+  // Role content
+  if(S.role==='rai'){
+    document.getElementById('role-ico').textContent='😈';
+    document.getElementById('role-title').textContent='You are RAI';
+    document.getElementById('role-title').style.color='#fca5a5';
+    document.getElementById('role-sub').textContent='Secretly sabotage the team. You cannot die.';
+  }else{
+    document.getElementById('role-ico').textContent='🎮';
+    document.getElementById('role-title').textContent='You are a Player';
+    document.getElementById('role-title').style.color='#fff';
+    document.getElementById('role-sub').textContent='Work with your team to escape. One among you is RAI. Trust no one.';
+  }
+  // Leader content — read from gameSettings
+  const g=S.gameSettings;
+  const leader=S.players.find(p=>p.id===g?.current_leader_id);
+  if(leader){
+    document.getElementById('role-leader-avatar').textContent=leader.avatar;
+    document.getElementById('role-leader-name').textContent=leader.name;
+    document.getElementById('role-leader-sub').textContent=
+      leader.id===S.playerId?'That\'s you! Get ready to focus.':'is reading the room first';
+  }
+  go('s-role');
+  _firstRoomBgShown=false;
+  preloadAllRoomBgs();
+  // Auto-dismiss after 2s then start leader flow
+  let cd=2;document.getElementById('role-countdown').textContent=cd;
+  const tick=setInterval(()=>{
+    cd--;document.getElementById('role-countdown').textContent=Math.max(0,cd);
+    if(cd<=0){
+      clearInterval(tick);
+      startPoll(S.gameId);
+      // Immediately trigger leader flow from current game state
+      if(g&&g.current_leader_id){
+        const posKey=`${(g.current_pos||S.mapData.start)[0]},${(g.current_pos||S.mapData.start)[1]}`;
+        const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
+        S.lastLeaderPhase='flash';
+        S._leaderAnnounced=true;
+        if(g.current_leader_id===S.playerId){
+          startLeaderFlash(g,dc);
+        }else{
+          startLeaderWait(g,S.players);
+        }
+      }
+    }
+  },1000);
+}
+
+// enterGameAfterReveal no longer needed — kept for safety
+function enterGameAfterReveal(){startPoll(S.gameId);}
 
 // ══ HOST: ROOM EFFECT ════════════════════════════════════════
 async function hostApplyEffect(pos,players,g){
@@ -897,8 +952,10 @@ async function hostApplyEffect(pos,players,g){
     for(const p of lp){const o=players.find(x=>x.id===p.id);if(o&&(o.hp!==p.hp||o.alive!==p.alive))await dbPatch('players',{id:`eq.${p.id}`},{hp:p.hp,alive:p.alive}).catch(()=>{});}
     S.players=lp;
     if(lp.filter(p=>p.alive).length<=2)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'rai'}).catch(()=>{});}
-  // Pick leader after effect — use updated player list
-  await hostPickLeader(S.players.length?S.players:players,g);
+  // Pick leader after effect — skip if already picked for this room
+  if(!g.current_leader_id||g.leader_phase==='done'){
+    await hostPickLeader(S.players.length?S.players:players,g);
+  }
 }
 
 // ══ HOST: TASK AUTO-ADVANCE ══════════════════════════════════
@@ -1307,8 +1364,10 @@ async function hostPickLeader(players,g){
   }).catch(()=>{});
 }
 
-// Show leader announcement (2s) then transition
+// Show leader announcement (2s) then transition — guarded against double-fire
 function showLeaderAnnounce(g,players,then){
+  if(S._leaderAnnounced)return;
+  S._leaderAnnounced=true;
   const leader=players.find(p=>p.id===g.current_leader_id);
   if(!leader){then();return;}
   document.getElementById('la-avatar').textContent=leader.avatar;
@@ -1386,7 +1445,7 @@ async function leaveGame(){
   stopPoll();stopVoteTimer();stopDistTimer();
   if(S.gameId&&S.isHost)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'abandoned'}).catch(()=>{});
   if(S.playerId)await dbDelete('players',{id:`eq.${S.playerId}`}).catch(()=>{});
-  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,lastLeaderPhase:null,leaderFlashData:null,_moving:false};
+  S={gameId:null,gameCode:null,playerId:null,isHost:false,role:null,pollTimer:null,voteTimer:null,distTimer:null,mapData:null,players:[],myVote:null,gameSettings:null,lastPhase:null,lastPos:null,lastPosKey:null,lastPopupTs:null,lastLeaderPhase:null,leaderFlashData:null,_leaderAnnounced:false,_moving:false};
   go('s2');}
 
 // ══ ABANDON ON CLOSE/REFRESH (best-effort, host only) ════════
