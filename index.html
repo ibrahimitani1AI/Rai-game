@@ -208,7 +208,7 @@ body{display:flex;align-items:center;justify-content:center}
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v26 — combined role+leader reveal, auto-dismiss, clean sequence</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v28 — leader reset on room move, round 2+ leader flash fixed</div>
 </div>
 
 <!-- S2 -->
@@ -807,34 +807,8 @@ async function doPoll(gId){
         }
         S.lastPos=[...pos];
         if(S.isHost)await hostApplyEffect(pos,players,g);
-        // Re-read g after host effect (leader may now be set)
-        // For non-first rooms: show leader announce then flash/wait
-        // For first room: handled by showRoleReveal auto-dismiss
-        const isFirstRoom=!prevPosKey;
-        if(!isFirstRoom&&(g.leader_phase==='flash'||g.leader_phase==='done')){
-          const lp=g.leader_phase;S.lastLeaderPhase=lp;
-          if(lp==='flash'){
-            showLeaderAnnounce(g,players,()=>{
-              const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
-              if(g.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
-              else{startLeaderWait(g,players);}
-            });
-          }else{enterRoomView(pos,votes,g);startVoteTimer(g);}
-        }
-        // if leader_phase not yet written, poll catches it next tick via else-if below
-      }else if(phase==='voting'&&posKey===prevPosKey&&g.leader_phase!==S.lastLeaderPhase){
-        // leader phase changed within same room
-        const lp=g.leader_phase;S.lastLeaderPhase=lp;
-        if(lp==='flash'){
-          showLeaderAnnounce(g,players,()=>{
-            const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
-            if(g.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
-            else{startLeaderWait(g,players);}
-          });
-        }else if(lp==='done'){
-          enterRoomView(pos,votes,g);
-          startVoteTimer(g);
-        }
+        // leader_phase will be written by hostPickLeader shortly after
+        // sync block detects it next poll tick
       }else if(phase==='distraction'&&prevPhase!=='distraction'){
         stopVoteTimer();startDistractionView(g);
       }else if(phase==='reveal'&&prevPhase!=='reveal'){
@@ -844,6 +818,20 @@ async function doPoll(gId){
     // SYNC WITHIN PHASE
     if(phase==='voting'){
       const alive=players.filter(p=>p.alive);const vcount=Object.keys(votes).length;
+      // leader_phase transition — checked every poll tick
+      if(g.leader_phase!==S.lastLeaderPhase){
+        const lp=g.leader_phase;S.lastLeaderPhase=lp;
+        if(lp==='flash'&&!S._leaderAnnounced){
+          showLeaderAnnounce(g,players,()=>{
+            const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
+            if(g.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
+            else{startLeaderWait(g,players);}
+          });
+          return;
+        }else if(lp==='done'){
+          enterRoomView(pos,votes,g);startVoteTimer(g);return;
+        }
+      }
       if(cur==='s7'){renderVoteStatus(players,votes);renderMyHP();}
       if(cur==='s8'){
         const vt={};Object.values(votes).forEach(sv=>{vt[sv]=(vt[sv]||0)+1;});
@@ -946,16 +934,14 @@ async function hostApplyEffect(pos,players,g){
       for(let row=0;row<ROWS;row++)for(let col=c0;col<=c1;col++)if(S.mapData.grid[row][col]&&S.mapData.grid[row][col]!=='T')cands.push([row,col]);
       if(cands.length){const dest=cands[Math.floor(Math.random()*cands.length)];
         const nv={...(g.visited||{})};nv[`${dest[0]},${dest[1]}`]=(nv[`${dest[0]},${dest[1]}`]||0)+1;
-        await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:dest,visited:nv,current_bg:null,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()}).catch(()=>{});
+        await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:dest,visited:nv,current_bg:null,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString(),leader_phase:null,current_leader_id:null}).catch(()=>{});
         return;}}return;}
   if(changed){
     for(const p of lp){const o=players.find(x=>x.id===p.id);if(o&&(o.hp!==p.hp||o.alive!==p.alive))await dbPatch('players',{id:`eq.${p.id}`},{hp:p.hp,alive:p.alive}).catch(()=>{});}
     S.players=lp;
     if(lp.filter(p=>p.alive).length<=2)await dbPatch('games',{id:`eq.${S.gameId}`},{status:'finished',phase:'finished',winner:'rai'}).catch(()=>{});}
-  // Pick leader after effect — skip if already picked for this room
-  if(!g.current_leader_id||g.leader_phase==='done'){
-    await hostPickLeader(S.players.length?S.players:players,g);
-  }
+  // Always pick a new leader on room entry (leader fields reset on move)
+  await hostPickLeader(S.players.length?S.players:players,g);
 }
 
 // ══ HOST: TASK AUTO-ADVANCE ══════════════════════════════════
@@ -964,7 +950,7 @@ async function hostHandleTask(pos,g){
   if(nc<S.mapData.COLS&&S.mapData.grid[r][nc]==='N'){
     await new Promise(res=>setTimeout(res,2000));
     const nv={...(g.visited||{})};nv[`${r},${nc}`]=(nv[`${r},${nc}`]||0)+1;
-    await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:[r,nc],visited:nv,current_bg:null,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()}).catch(()=>{});}}
+    await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:[r,nc],visited:nv,current_bg:null,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString(),leader_phase:null,current_leader_id:null}).catch(()=>{});}}
 
 // ══ HOST: MOVE AFTER REVEAL ══════════════════════════════════
 async function hostMoveToNextRoom(g,votes){
@@ -986,7 +972,7 @@ async function hostMoveToNextRoom(g,votes){
   }
   const[nr,nc]=winDoor.target;
   const nv={...(g.visited||{})};nv[`${nr},${nc}`]=(nv[`${nr},${nc}`]||0)+1;
-  await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:[nr,nc],visited:nv,current_bg:null,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString()}).catch(()=>{});}
+  await dbPatch('games',{id:`eq.${S.gameId}`},{current_pos:[nr,nc],visited:nv,current_bg:null,phase:'voting',current_votes:{},step:(g.step||0)+1,phase_started_at:new Date().toISOString(),leader_phase:null,current_leader_id:null}).catch(()=>{});}
 
 // ══ VOTE TIMER ═══════════════════════════════════════════════
 let voteSecsLeft=60,voteTotalSecs=60;
