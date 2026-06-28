@@ -208,7 +208,7 @@ body{display:flex;align-items:center;justify-content:center}
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v24 — leader flow fixed, first room leader set at game start</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v25 — leader flash transitions to vote correctly</div>
 </div>
 
 <!-- S2 -->
@@ -1321,6 +1321,7 @@ function showLeaderAnnounce(g,players,then){
 
 // Leader sees the flash mini-game
 function startLeaderFlash(g,dc){
+  S.lastLeaderPhase='flash';
   const flashData=generateFlash(dc||4);
   S.leaderFlashData=flashData;
   document.getElementById('lf-challenge-label').textContent=flashData.label;
@@ -1343,14 +1344,20 @@ function startLeaderFlash(g,dc){
       // 5s hint phase countdown
       let hsecs=5;
       document.getElementById('lf-hint-timer').textContent=`Voting opens in ${hsecs}s…`;
-      const hintTick=setInterval(()=>{
-        hsecs--;document.getElementById('lf-hint-timer').textContent=`Voting opens in ${hsecs}s…`;
+      const hintTick=setInterval(async()=>{
+        hsecs--;document.getElementById('lf-hint-timer').textContent=`Voting opens in ${Math.max(0,hsecs)}s…`;
         if(hsecs<=0){
           clearInterval(hintTick);
-          // Host writes leader_phase:'done' to open voting
-          if(S.isHost||S.role==='rai'){
-            dbPatch('games',{id:`eq.${S.gameId}`},{leader_phase:'done'}).catch(()=>{});
-          }
+          // Write done to DB
+          await dbPatch('games',{id:`eq.${S.gameId}`},{leader_phase:'done'}).catch(()=>{});
+          // Transition leader's own screen to voting
+          S.lastLeaderPhase='done';
+          const g2=S.gameSettings;
+          const pos=Array.isArray(g2?.current_pos)?g2.current_pos:S.mapData.start;
+          const posKey=`${pos[0]},${pos[1]}`;
+          const votes=g2?.current_votes||{};
+          enterRoomView(pos,votes,g2||g);
+          startVoteTimer(g2||g);
         }
       },1000);
     }
@@ -1359,6 +1366,7 @@ function startLeaderFlash(g,dc){
 
 // Non-leaders wait
 function startLeaderWait(g,players){
+  S.lastLeaderPhase='flash';
   const leader=players.find(p=>p.id===g.current_leader_id);
   document.getElementById('lw-name').textContent=leader?leader.name:'Leader';
   go('s-leader-wait');
