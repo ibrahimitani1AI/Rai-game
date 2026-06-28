@@ -208,7 +208,7 @@ body{display:flex;align-items:center;justify-content:center}
 <div class="screen active" id="s1">
   <h1>Rogue AI</h1><h2>Trapped in VR</h2>
   <button class="btn-g" onclick="go('s2')">Start Game</button>
-  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v29 — flags pre-set before poll, no double leader trigger</div>
+  <div style="position:absolute;bottom:8px;right:12px;font-size:10px;color:rgba(255,255,255,.3);font-family:monospace">build: v30 — leader flow fully rewritten, single entry point doLeaderPhase</div>
 </div>
 
 <!-- S2 -->
@@ -822,11 +822,7 @@ async function doPoll(gId){
       if(g.leader_phase!==S.lastLeaderPhase){
         const lp=g.leader_phase;S.lastLeaderPhase=lp;
         if(lp==='flash'&&!S._leaderAnnounced){
-          showLeaderAnnounce(g,players,()=>{
-            const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
-            if(g.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
-            else{startLeaderWait(g,players);}
-          });
+          doLeaderPhase(g.current_leader_id,players,g);
           return;
         }else if(lp==='done'){
           enterRoomView(pos,votes,g);startVoteTimer(g);return;
@@ -900,9 +896,7 @@ function showRoleReveal(){
     if(cd<=0){
       clearInterval(tick);
       const posKey=S.lastPosKey;
-      const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
-      if(g?.current_leader_id===S.playerId){startLeaderFlash(g,dc);}
-      else{startLeaderWait(g,S.players);}
+      doLeaderPhase(g?.current_leader_id,S.players,g);
       startPoll(S.gameId);
     }
   },1000);
@@ -1277,8 +1271,7 @@ function frndInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 
 function generateFlash(dc){
   const total=FLASH_ROWS*FLASH_COLS;
-  const MAX=30;
-  for(let attempt=0;attempt<MAX;attempt++){
+  for(let attempt=0;attempt<30;attempt++){
     const hintType=frnd(['combo','position','count']);
     const correctDoor=frndInt(1,dc);
     const correctBg=frnd(FLASH_BG);const correctTxt=frnd(FLASH_TXT);
@@ -1291,132 +1284,132 @@ function generateFlash(dc){
       bg:i===correctIdx?correctBg:frnd(FLASH_BG),
       txt:i===correctIdx?correctTxt:frnd(FLASH_TXT),
     }));
-    if(hintType==='combo'){
-      if(cells.some((c,i)=>i!==correctIdx&&c.bg.name===correctBg.name&&c.txt.name===correctTxt.name))continue;
-    }
+    if(hintType==='combo'&&cells.some((c,i)=>i!==correctIdx&&c.bg.name===correctBg.name&&c.txt.name===correctTxt.name))continue;
     const actualCount=cells.filter(c=>c.num===correctDoor).length;
     if(hintType==='count'){
       const others=[...new Set(cells.filter(c=>c.num!==correctDoor).map(c=>c.num))];
       if(others.some(n=>cells.filter(c=>c.num===n).length===actualCount))continue;
     }
-    const ROW_NAMES=['top','middle','bottom'];
-    const COL_NAMES=['left','middle','right'];
+    const ROW=['top','middle','bottom'];const COL=['left','middle','right'];
     let hintText='';
     if(hintType==='combo')hintText=`had a ${correctBg.name} background with a ${correctTxt.name} number`;
-    else if(hintType==='position')hintText=`was in the ${ROW_NAMES[correctRow]} row, ${COL_NAMES[correctCol]} column`;
-    else if(hintType==='count')hintText=`appeared exactly ${actualCount} time${actualCount>1?'s':''} in the grid`;
+    else if(hintType==='position')hintText=`was in the ${ROW[correctRow]} row, ${COL[correctCol]} column`;
+    else hintText=`appeared exactly ${actualCount} time${actualCount>1?'s':''} in the grid`;
     const LABELS={combo:'🎨 Remember the Color',position:'📍 Remember the Position',count:'🔢 Count the Occurrences'};
     return{cells,correctIdx,correctDoor,hintText,hintType,label:LABELS[hintType]};
   }
-  // fallback - position always works
+  // fallback
   const correctDoor=frndInt(1,dc);const correctIdx=frndInt(0,total-1);
-  const correctRow=Math.floor(correctIdx/FLASH_COLS);const correctCol=correctIdx%FLASH_COLS;
   const allNums=[...Array.from({length:dc},(_,i)=>i+1),5,6].slice(0,5);
   const cells=Array.from({length:total},(_,i)=>({num:i===correctIdx?correctDoor:frnd(allNums),bg:frnd(FLASH_BG),txt:frnd(FLASH_TXT)}));
-  const ROW_NAMES=['top','middle','bottom'];const COL_NAMES=['left','middle','right'];
-  return{cells,correctIdx,correctDoor,hintText:`was in the ${ROW_NAMES[correctRow]} row, ${COL_NAMES[correctCol]} column`,hintType:'position',label:'📍 Remember the Position'};
+  const r2=Math.floor(correctIdx/FLASH_COLS);const c2=correctIdx%FLASH_COLS;
+  return{cells,correctIdx,correctDoor,hintText:`was in the ${['top','middle','bottom'][r2]} row, ${['left','middle','right'][c2]} column`,hintType:'position',label:'📍 Remember the Position'};
 }
 
 function renderFlashGrid(cells,hintType){
   const grid=document.getElementById('lf-grid');
+  if(!grid)return;
   grid.style.gridTemplateColumns=`repeat(${FLASH_COLS},72px)`;
   grid.innerHTML='';
-  cells.forEach((c,i)=>{
+  cells.forEach(c=>{
     const div=document.createElement('div');
-    div.style.cssText=`width:72px;height:72px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;font-family:'Nunito',sans-serif;border:2px solid transparent`;
+    div.style.cssText='width:72px;height:72px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;font-family:Nunito,sans-serif;';
     if(hintType==='combo'){div.style.background=c.bg.hex;div.style.color=c.txt.hex;}
-    else{div.style.background='rgba(255,255,255,0.1)';div.style.color='#fff';div.style.border='2px solid rgba(255,255,255,0.15)';}
-    div.textContent=c.num;grid.appendChild(div);
+    else{div.style.background='rgba(255,255,255,0.12)';div.style.color='#fff';div.style.outline='2px solid rgba(255,255,255,0.2)';}
+    div.textContent=c.num;
+    grid.appendChild(div);
   });
 }
 
 // ══ LEADER FLOW ══════════════════════════════════════════════
-// Host picks leader and writes to DB after effect fires
+// HOST ONLY: pick a random leader and write to DB
 async function hostPickLeader(players,g){
   const alive=players.filter(p=>p.alive);
   if(!alive.length)return;
-  const lastId=g.last_leader_id;
-  const candidates=alive.length>1?alive.filter(p=>p.id!==lastId):alive;
+  const candidates=alive.length>1?alive.filter(p=>p.id!==g.last_leader_id):alive;
   const leader=candidates[Math.floor(Math.random()*candidates.length)];
   await dbPatch('games',{id:`eq.${S.gameId}`},{
-    current_leader_id:leader.id,
-    last_leader_id:leader.id,
-    leader_phase:'flash',
-    leader_phase_started_at:new Date().toISOString()
+    current_leader_id:leader.id,last_leader_id:leader.id,
+    leader_phase:'flash',leader_phase_started_at:new Date().toISOString()
   }).catch(()=>{});
 }
 
-// Show leader announcement (2s) then transition — guarded against double-fire
-function showLeaderAnnounce(g,players,then){
+// Show 2s leader announcement then call callback
+// Guarded by S._leaderAnnounced to prevent double-fire
+function showLeaderAnnounce(leaderId,players,then){
   if(S._leaderAnnounced)return;
   S._leaderAnnounced=true;
-  const leader=players.find(p=>p.id===g.current_leader_id);
+  const leader=players.find(p=>p.id===leaderId);
   if(!leader){then();return;}
   document.getElementById('la-avatar').textContent=leader.avatar;
   document.getElementById('la-name').textContent=leader.name;
-  document.getElementById('la-sub').textContent=
-    leader.id===S.playerId?'That\'s you! Get ready to focus.':'is reading the room…';
+  document.getElementById('la-sub').textContent=leader.id===S.playerId?'That\'s you! Get ready to focus.':'is reading the room…';
   go('s-leader-announce');
   setTimeout(()=>then(),2000);
 }
 
-// Leader sees the flash mini-game
-function startLeaderFlash(g,dc){
+// LEADER: show flash grid (5s) then hint (5s) then open voting
+function startLeaderFlash(leaderId,dc,g){
+  // safety: only run on this player's device if they are the leader
+  if(leaderId!==S.playerId)return;
   S.lastLeaderPhase='flash';
-  const flashData=generateFlash(dc||4);
-  S.leaderFlashData=flashData;
-  document.getElementById('lf-challenge-label').textContent=flashData.label;
+  const data=generateFlash(dc||4);
+  // render grid THEN show screen
+  document.getElementById('lf-challenge-label').textContent=data.label;
   document.getElementById('lf-hint').style.display='none';
-  renderFlashGrid(flashData.cells,flashData.hintType);
+  document.getElementById('lf-grid').style.filter='none';
+  renderFlashGrid(data.cells,data.hintType);
   go('s-leader-flash');
-
-  // 5s flash phase
+  // 5s grid phase
   let secs=5;
-  document.getElementById('lf-timer-lbl').textContent=`${secs}s`;
-  const flashTick=setInterval(()=>{
-    secs--;document.getElementById('lf-timer-lbl').textContent=`${secs}s`;
+  document.getElementById('lf-timer-lbl').textContent=secs+'s';
+  const t1=setInterval(()=>{
+    secs--;
+    document.getElementById('lf-timer-lbl').textContent=Math.max(0,secs)+'s';
     if(secs<=0){
-      clearInterval(flashTick);
-      // blur grid, show hint
+      clearInterval(t1);
       document.getElementById('lf-grid').style.filter='blur(8px)';
-      const hintEl=document.getElementById('lf-hint');
-      document.getElementById('lf-hint-text').textContent=`The correct door ${flashData.hintText}`;
-      hintEl.style.display='flex';
-      // 5s hint phase countdown
+      document.getElementById('lf-hint-text').textContent='The correct door '+data.hintText;
+      document.getElementById('lf-hint').style.display='flex';
+      // 5s hint phase
       let hsecs=5;
-      document.getElementById('lf-hint-timer').textContent=`Voting opens in ${hsecs}s…`;
-      const hintTick=setInterval(async()=>{
-        hsecs--;document.getElementById('lf-hint-timer').textContent=`Voting opens in ${Math.max(0,hsecs)}s…`;
+      document.getElementById('lf-hint-timer').textContent='Voting opens in '+hsecs+'s…';
+      const t2=setInterval(async()=>{
+        hsecs--;
+        document.getElementById('lf-hint-timer').textContent='Voting opens in '+Math.max(0,hsecs)+'s…';
         if(hsecs<=0){
-          clearInterval(hintTick);
-          // Write done to DB
-          await dbPatch('games',{id:`eq.${S.gameId}`},{leader_phase:'done'}).catch(()=>{});
-          // Transition leader's own screen to voting
+          clearInterval(t2);
           S.lastLeaderPhase='done';
-          const g2=S.gameSettings;
-          const pos=Array.isArray(g2?.current_pos)?g2.current_pos:S.mapData.start;
-          const posKey=`${pos[0]},${pos[1]}`;
-          const votes=g2?.current_votes||{};
-          enterRoomView(pos,votes,g2||g);
-          startVoteTimer(g2||g);
+          await dbPatch('games',{id:`eq.${S.gameId}`},{leader_phase:'done'}).catch(()=>{});
+          // open voting on leader's own screen
+          const pos=Array.isArray(S.gameSettings?.current_pos)?S.gameSettings.current_pos:S.mapData.start;
+          enterRoomView(pos,S.gameSettings?.current_votes||{},S.gameSettings);
+          startVoteTimer(S.gameSettings);
         }
       },1000);
     }
   },1000);
 }
 
-// Non-leaders wait
-function startLeaderWait(g,players){
+// NON-LEADERS: show waiting screen (poll will detect done and open voting)
+function startLeaderWait(leaderId,players){
   S.lastLeaderPhase='flash';
-  const leader=players.find(p=>p.id===g.current_leader_id);
+  const leader=players.find(p=>p.id===leaderId);
   document.getElementById('lw-name').textContent=leader?leader.name:'Leader';
   go('s-leader-wait');
   let secs=10;
   document.getElementById('lw-countdown').textContent=secs;
-  const tick=setInterval(()=>{
-    secs--;document.getElementById('lw-countdown').textContent=Math.max(0,secs);
-    if(secs<=0)clearInterval(tick);
-  },1000);
+  const t=setInterval(()=>{secs--;document.getElementById('lw-countdown').textContent=Math.max(0,secs);if(secs<=0)clearInterval(t);},1000);
+}
+
+// ENTRY POINT: called by poll and showRoleReveal when leader_phase changes to 'flash'
+function doLeaderPhase(leaderId,players,g){
+  const posKey=`${(Array.isArray(g?.current_pos)?g.current_pos:S.mapData.start)[0]},${(Array.isArray(g?.current_pos)?g.current_pos:S.mapData.start)[1]}`;
+  const dc=Object.keys(S.mapData.doorAssignments[posKey]||{}).length||4;
+  showLeaderAnnounce(leaderId,players,()=>{
+    if(leaderId===S.playerId){startLeaderFlash(leaderId,dc,g);}
+    else{startLeaderWait(leaderId,players);}
+  });
 }
 
 function confirmLeave(){
